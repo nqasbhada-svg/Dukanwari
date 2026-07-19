@@ -28,6 +28,7 @@ import {
   Clock,
   AlertTriangle
 } from 'lucide-react';
+import { auth, googleAuthProvider, signInWithPopup } from './utils/firebase.ts';
 
 // Models & Types
 import { 
@@ -87,6 +88,7 @@ export default function App() {
 
   // Authentication State
   const [session, setSession] = useState<UserSession | null>(null);
+  const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [loginMobile, setLoginMobile] = useState('');
   const [loginOtp, setLoginOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -112,6 +114,115 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
   const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultSettings);
+
+  // Cloud SQL data loader
+  useEffect(() => {
+    const loadCloudData = async () => {
+      try {
+        const [
+          regsRes,
+          productsRes,
+          customersRes,
+          suppliersRes,
+          invoicesRes,
+          purchasesRes,
+          auditLogsRes,
+          settingsRes
+        ] = await Promise.all([
+          fetch('/api/registrations').then(r => r.ok ? r.json() : null),
+          fetch('/api/products').then(r => r.ok ? r.json() : null),
+          fetch('/api/customers').then(r => r.ok ? r.json() : null),
+          fetch('/api/suppliers').then(r => r.ok ? r.json() : null),
+          fetch('/api/invoices').then(r => r.ok ? r.json() : null),
+          fetch('/api/purchase-bills').then(r => r.ok ? r.json() : null),
+          fetch('/api/audit-logs').then(r => r.ok ? r.json() : null),
+          fetch('/api/settings').then(r => r.ok ? r.json() : null)
+        ]);
+
+        if (regsRes && regsRes.length > 0) setRegistrations(regsRes);
+        if (productsRes && productsRes.length > 0) setProducts(productsRes);
+        if (customersRes && customersRes.length > 0) setCustomers(customersRes);
+        if (suppliersRes && suppliersRes.length > 0) setSuppliers(suppliersRes);
+        if (invoicesRes && invoicesRes.length > 0) setInvoices(invoicesRes);
+        if (purchasesRes && purchasesRes.length > 0) setPurchaseHistory(purchasesRes);
+        if (auditLogsRes && auditLogsRes.length > 0) setAuditLogs(auditLogsRes);
+        if (settingsRes) setShopSettings(settingsRes);
+      } catch (err) {
+        console.warn('Failed to load initial data from Cloud SQL. Using local fallback:', err);
+      }
+    };
+    loadCloudData();
+  }, []);
+
+  // Google Authentication Handler using Firebase and Cloud SQL profile sync
+  const handleGoogleSignIn = async () => {
+    if (isSigningIn) return;
+    setIsSigningIn(true);
+    setOtpError('');
+    try {
+      const result = await signInWithPopup(auth, googleAuthProvider);
+      const user = result.user;
+      const idToken = await user.getIdToken();
+
+      const response = await fetch('/api/users/sync', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to sync user profile with Cloud Database.');
+      }
+
+      const syncResult = await response.json();
+      
+      setSession({
+        role: 'owner',
+        mobile: user.phoneNumber || 'Google Sign-In',
+        name: user.displayName || user.email || 'Google User',
+        permissions: ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT']
+      });
+
+      // Log successful login
+      const timestamp = new Date().toISOString();
+      const newLog: AuditLog = {
+        id: 'aud-' + Date.now(),
+        timestamp,
+        userId: user.uid,
+        userName: user.displayName || user.email || 'Google User',
+        action: 'GOOGLE_SIGNIN_SUCCESS',
+        details: `Successful Cloud DB user authentication & profile synchronization.`
+      };
+      setAuditLogs(prev => [newLog, ...prev]);
+
+      // Sync settings for the shop
+      setShopSettings({
+        ...defaultSettings,
+        shopName: user.displayName ? `${user.displayName}'s Boutique` : 'Vastraa Trends',
+        mobile: user.phoneNumber || '9876543210',
+        whatsapp: user.phoneNumber || '9876543210',
+      });
+
+    } catch (error: any) {
+      console.error('Google sign-in error:', error);
+      const isPopupError = error.message?.includes('popup-blocked') || 
+                           error.message?.includes('cancelled-popup-request') || 
+                           error.message?.includes('assertion-failed') ||
+                           error.message?.includes('promise');
+      if (isPopupError) {
+        setOtpError(isMr ? 
+          'गूगल लॉगिन पॉप-अप ब्लॉक झाला आहे! आयफ्रेम सुरक्षा नियमांमुळे असे होऊ शकते. कृपया उजवीकडे वरच्या बाजूला असलेल्या "Open in New Tab" वर क्लिक करा किंवा खालील पर्यायी मार्ग (OTP / व्यवसाय लॉगिन) वापरा.' : 
+          'Google Sign-In popup was blocked or cancelled! This is a standard security restriction inside preview frames. Please click the "Open in New Tab" button in the top-right corner to log in, or use the alternative OTP / Business login methods below.'
+        );
+      } else {
+        setOtpError(isMr ? `गूगल लॉगिन अयशस्वी: ${error.message}` : `Google Sign-In Failed: ${error.message}`);
+      }
+    } finally {
+      setIsSigningIn(false);
+    }
+  };
 
   // Business Login verification handler
   const handleBusinessLogin = (e: React.FormEvent) => {
@@ -304,59 +415,149 @@ export default function App() {
   };
 
   // Database State mutators
-  const handleAddProduct = (newP: Omit<Product, 'id'>) => {
+  const handleAddProduct = async (newP: Omit<Product, 'id'>) => {
     const product: Product = {
       ...newP,
       id: 'prod-' + Date.now(),
     };
-    setProducts(prev => [product, ...prev]);
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        setProducts(prev => [saved, ...prev]);
+      } else {
+        setProducts(prev => [product, ...prev]);
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, saving locally:', err);
+      setProducts(prev => [product, ...prev]);
+    }
     logEvent('PRODUCT_ADD', `Added clothes: ${product.itemName} (${product.size}) with starting stock: ${product.openingStock}`);
   };
 
-  const handleEditProduct = (updatedP: Product) => {
-    setProducts(prev => prev.map(p => p.id === updatedP.id ? updatedP : p));
+  const handleEditProduct = async (updatedP: Product) => {
+    try {
+      const response = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedP),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        setProducts(prev => prev.map(p => p.id === saved.id ? saved : p));
+      } else {
+        setProducts(prev => prev.map(p => p.id === updatedP.id ? updatedP : p));
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, saving locally:', err);
+      setProducts(prev => prev.map(p => p.id === updatedP.id ? updatedP : p));
+    }
     logEvent('PRODUCT_EDIT', `Modified garment details for SKU ID: ${updatedP.barcode}`);
   };
 
-  const handleDeleteProduct = (id: string) => {
+  const handleDeleteProduct = async (id: string) => {
     const p = products.find(prod => prod.id === id);
-    setProducts(prev => prev.filter(prod => prod.id !== id));
+    try {
+      const response = await fetch(`/api/products/${id}`, {
+        method: 'DELETE',
+      });
+      if (response.ok) {
+        setProducts(prev => prev.filter(prod => prod.id !== id));
+      } else {
+        setProducts(prev => prev.filter(prod => prod.id !== id));
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, deleting locally:', err);
+      setProducts(prev => prev.filter(prod => prod.id !== id));
+    }
     logEvent('PRODUCT_DELETE', `Deleted SKU: ${p?.itemName} from clothing catalog`);
   };
 
-  const handleAddCustomer = (newC: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => {
+  const handleAddCustomer = async (newC: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => {
     const client: Customer = {
       ...newC,
       id: 'cust-' + Date.now(),
       outstanding: 0,
       ledger: []
     };
-    setCustomers(prev => [...prev, client]);
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(client),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        setCustomers(prev => [...prev, saved]);
+      } else {
+        setCustomers(prev => [...prev, client]);
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, saving locally:', err);
+      setCustomers(prev => [...prev, client]);
+    }
     logEvent('CRM_CLIENT_ADD', `Registered new client: ${client.name} | Credit Protection: ₹${client.creditLimit}`);
   };
 
-  const handleAddSupplier = (newS: Omit<Supplier, 'id' | 'outstanding' | 'ledger'>) => {
+  const handleAddSupplier = async (newS: Omit<Supplier, 'id' | 'outstanding' | 'ledger'>) => {
     const vendor: Supplier = {
       ...newS,
       id: 'sup-' + Date.now(),
       outstanding: 0,
       ledger: []
     };
-    setSuppliers(prev => [...prev, vendor]);
+    try {
+      const response = await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendor),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        setSuppliers(prev => [...prev, saved]);
+      } else {
+        setSuppliers(prev => [...prev, vendor]);
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, saving locally:', err);
+      setSuppliers(prev => [...prev, vendor]);
+    }
     logEvent('VEND_SUP_ADD', `Registered new wholesale vendor: ${vendor.name}`);
   };
 
-  const handleGenerateInvoice = (invoice: Invoice) => {
+  const handleGenerateInvoice = async (invoice: Invoice) => {
+    try {
+      await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoice),
+      });
+    } catch (err) {
+      console.warn('Backend connection unavailable for saving invoice:', err);
+    }
+
     setInvoices(prev => [invoice, ...prev]);
     
     // Auto-decrease products inventories
-    setProducts(prev => prev.map(p => {
+    const updatedProducts = products.map(p => {
       const billItem = invoice.items.find(it => it.productId === p.id);
       if (billItem) {
-        return { ...p, currentStock: Math.max(0, p.currentStock - billItem.quantity) };
+        const updatedP = { ...p, currentStock: Math.max(0, p.currentStock - billItem.quantity) };
+        // Sync product stock to DB
+        fetch('/api/products', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedP),
+        }).catch(err => console.warn('Failed to sync updated stock to DB:', err));
+        return updatedP;
       }
       return p;
-    }));
+    });
+    setProducts(updatedProducts);
 
     // Adjust outstanding debts on customer if payment is CREDIT
     if (invoice.paymentMode === 'Credit' || invoice.status === 'Partial') {
@@ -373,11 +574,18 @@ export default function App() {
             credit: invoice.amountPaid,
             balance: c.outstanding + debtAmount
           };
-          return {
+          const updatedC = {
             ...c,
             outstanding: c.outstanding + debtAmount,
             ledger: [...c.ledger, ledgerEntry]
           };
+          // Sync customer record to DB
+          fetch('/api/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedC),
+          }).catch(err => console.warn('Failed to sync updated customer outstanding to DB:', err));
+          return updatedC;
         }
         return c;
       }));
@@ -386,7 +594,17 @@ export default function App() {
     logEvent('BILL_CREATE', `Processed ${invoice.type} bill ${invoice.invoiceNumber} for client: ${invoice.customerName} of amount ₹${invoice.grandTotal}`);
   };
 
-  const handleAddPurchaseBill = (bill: PurchaseBill) => {
+  const handleAddPurchaseBill = async (bill: PurchaseBill) => {
+    try {
+      await fetch('/api/purchase-bills', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(bill),
+      });
+    } catch (err) {
+      console.warn('Backend connection unavailable for purchase bills:', err);
+    }
+
     setPurchaseHistory(prev => [bill, ...prev]);
     
     // Adjust supplier outstanding payable if credit
@@ -404,11 +622,18 @@ export default function App() {
             credit: bill.grandTotal,
             balance: s.outstanding + debt
           };
-          return {
+          const updatedS = {
             ...s,
             outstanding: s.outstanding + debt,
             ledger: [...s.ledger, ledger]
           };
+          // Sync supplier record to DB
+          fetch('/api/suppliers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedS),
+          }).catch(err => console.warn('Failed to sync updated supplier outstanding to DB:', err));
+          return updatedS;
         }
         return s;
       }));
@@ -539,6 +764,54 @@ export default function App() {
               </div>
               <h2 className="text-xl font-bold font-display tracking-tight mt-3">{t.loginTitle}</h2>
               <p className="text-white/60 text-xs">{t.loginSub}</p>
+            </div>
+
+            {/* Google Cloud Login Button */}
+            <div className="space-y-2">
+              <button
+                id="google-signin-btn"
+                onClick={handleGoogleSignIn}
+                disabled={isSigningIn}
+                className={`w-full py-3 bg-white text-slate-900 hover:bg-slate-100 transition rounded-xl text-xs font-bold font-sans tracking-wide flex items-center justify-center gap-2 shadow-lg shadow-white/5 active:scale-[0.98] ${isSigningIn ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isSigningIn ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{isMr ? 'लॉगिन होत आहे...' : 'Signing in...'}</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path fill="#EA4335" d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.48 14.97 1 12 1 7.35 1 3.4 3.65 1.51 7.5l3.86 3C6.27 7.74 8.89 5.04 12 5.04z" />
+                      <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.43c-.28 1.44-1.1 2.66-2.33 3.49l3.62 2.8c2.12-1.95 3.77-4.82 3.77-8.44z" />
+                      <path fill="#FBBC05" d="M5.37 10.5a6.97 6.97 0 0 1 0-4.4L1.51 3.1a11.97 11.97 0 0 0 0 10.8l3.86-3z" />
+                      <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.92l-3.62-2.8c-1.1.74-2.52 1.18-4.34 1.18-3.11 0-5.73-2.7-6.63-5.46L1.51 16c1.89 3.85 5.84 6.5 10.49 6.5z" />
+                    </svg>
+                    <span>{isMr ? 'गूगल खाते द्वारे प्रवेश' : 'Sign in with Google Cloud'}</span>
+                  </>
+                )}
+              </button>
+
+              {/* Iframe detection notice */}
+              {window.self !== window.top && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-xl text-[10px] leading-relaxed text-left space-y-1">
+                  <p className="font-bold">⚠️ {isMr ? 'इशारा (Iframe Notice):' : 'Iframe Workspace Notice:'}</p>
+                  <p>
+                    {isMr 
+                      ? 'गूगल लॉगिन पॉप-अप्स ब्राउझर सुरक्षा नियमांमुळे ब्लॉक होऊ शकतात. अडचण आल्यास, कृपया वरच्या उजव्या कोपऱ्यातील "Open in New Tab" वर क्लिक करा किंवा खालील OTP / व्यवसाय लॉगिन वापरा.' 
+                      : 'Google Sign-In popups may be blocked inside this preview frame. If it fails, click "Open in New Tab" in the top-right, or use the OTP / Business login options below.'}
+                  </p>
+                </div>
+              )}
+              
+              <div className="flex items-center gap-2 py-1">
+                <div className="h-[1px] bg-white/10 flex-1"></div>
+                <span className="text-[9px] uppercase tracking-wider text-slate-500 font-bold">{isMr ? 'किंवा' : 'or'}</span>
+                <div className="h-[1px] bg-white/10 flex-1"></div>
+              </div>
             </div>
 
             {/* Auth Mode Toggle Tabs */}
