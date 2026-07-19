@@ -229,8 +229,23 @@ export default function App() {
     e.preventDefault();
     setOtpError('');
     
+    const trimmedUsername = loginUsername.toLowerCase().trim();
+    if ((trimmedUsername === 'superadmin' || trimmedUsername === 'admin') && loginPassword === 'adminpassword') {
+      // Successful Super Admin login
+      setSession({
+        role: 'owner',
+        mobile: '9876543210',
+        name: 'Super Admin (Platform Owner)',
+        permissions: ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT']
+      });
+      setOtpError('');
+      setLoginUsername('');
+      setLoginPassword('');
+      return;
+    }
+
     const reg = registrations.find(r => 
-      r.loginInfo.username.toLowerCase() === loginUsername.toLowerCase().trim() && 
+      r.loginInfo.username.toLowerCase() === trimmedUsername && 
       r.loginInfo.password === loginPassword
     );
 
@@ -916,6 +931,9 @@ export default function App() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest"
                   />
+                  <span className="text-[9px] text-indigo-400 font-mono block text-right mt-1">
+                    🔑 {isMr ? 'सुपर ॲडमीन युझर:' : 'Super Admin:'} <span className="font-bold underline">superadmin</span> {isMr ? 'पासवर्ड:' : 'pass:'} <span className="font-bold underline">adminpassword</span>
+                  </span>
                 </div>
 
                 {otpError && <p className="text-rose-400 text-[11px] font-semibold">{otpError}</p>}
