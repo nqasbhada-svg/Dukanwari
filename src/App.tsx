@@ -73,6 +73,7 @@ import ShopRegistrationForm from './components/ShopRegistrationForm';
 import AdminApprovalView from './components/AdminApprovalView';
 import ShopOwnerStatusDashboard from './components/ShopOwnerStatusDashboard';
 import { ShopRegistration } from './types';
+import { hashPassword, comparePassword } from './utils/crypto';
 
 
 export default function App() {
@@ -249,7 +250,7 @@ export default function App() {
 
     const reg = registrations.find(r => 
       r.loginInfo.username.toLowerCase() === trimmedUsername && 
-      r.loginInfo.password === loginPassword
+      comparePassword(loginPassword, r.loginInfo.password)
     );
 
     if (reg) {
@@ -284,10 +285,32 @@ export default function App() {
   };
 
   // Submit registration form handler
-  const handleRegisterBusiness = (newReg: ShopRegistration) => {
-    const updated = [newReg, ...registrations];
+  const handleRegisterBusiness = async (newReg: ShopRegistration) => {
+    // Hash password securely using bcryptjs
+    const securedReg: ShopRegistration = {
+      ...newReg,
+      loginInfo: {
+        ...newReg.loginInfo,
+        password: hashPassword(newReg.loginInfo.password)
+      }
+    };
+
+    const updated = [securedReg, ...registrations];
     setRegistrations(updated);
     localStorage.setItem('vastraa_registrations', JSON.stringify(updated));
+    
+    // Synchronize secure registration with the backend Cloud SQL database
+    try {
+      await fetch('/api/registrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(securedReg)
+      });
+    } catch (error) {
+      console.error('Failed to sync secure registration with PostgreSQL database:', error);
+    }
     
     // Log auth audit trail
     const timestamp = new Date().toISOString();
@@ -302,7 +325,7 @@ export default function App() {
     setAuditLogs(prev => [newLog, ...prev]);
 
     // Send newly registered user directly to status tracking dashboard
-    setPendingSession(newReg);
+    setPendingSession(securedReg);
     setIsRegistering(false);
   };
 
