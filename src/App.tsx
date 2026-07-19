@@ -235,13 +235,14 @@ export default function App() {
       (trimmedUsername === 'superadmin' || trimmedUsername === 'admin' || trimmedUsername === 'systemadmin') && 
       (loginPassword === 'adminpassword' || loginPassword === 'admin123')
     ) {
-      // Successful Super Admin login
+      // Successful System Admin login
       setSession({
-        role: 'owner',
+        role: 'system_admin',
         mobile: '9876543210',
         name: 'System Admin (Platform Owner)',
-        permissions: ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT']
+        permissions: ['APPROVE_SHOPS', 'MANAGE_SUBSCRIPTIONS']
       });
+      setCurrentView('approvals');
       setOtpError('');
       setLoginUsername('');
       setLoginPassword('');
@@ -364,8 +365,8 @@ export default function App() {
     const newLog: AuditLog = {
       id: 'aud-' + Date.now(),
       timestamp,
-      userId: session?.role === 'owner' ? 'usr-1' : 'system',
-      userName: session?.role === 'owner' ? session.name : 'System Admin',
+      userId: session?.role === 'system_admin' ? 'system-admin' : (session?.role === 'owner' ? 'usr-1' : 'system'),
+      userName: session?.name || 'System Admin',
       action: `PARTNER_STATUS_${status.toUpperCase()}`,
       details: `Updated status of shop ${targetReg?.shopName || id} to ${status.toUpperCase()}. notes: ${notes || 'None'}`
     };
@@ -385,8 +386,8 @@ export default function App() {
     const newLog: AuditLog = {
       id: 'aud-' + Date.now(),
       timestamp: new Date().toISOString(),
-      userId: session?.role === 'owner' ? 'usr-1' : 'usr-2',
-      userName: session?.role === 'owner' ? 'Rahul (Owner)' : 'Amit (Employee)',
+      userId: session?.role === 'system_admin' ? 'system-admin' : (session?.role === 'owner' ? 'usr-1' : 'usr-2'),
+      userName: session?.name || 'System User',
       action: action,
       details: details
     };
@@ -734,18 +735,22 @@ export default function App() {
   };
 
   // Navigation menu links mapping
-  const menuItems = [
-    { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
-    { id: 'products', label: t.products, icon: Package },
-    { id: 'billing', label: t.billing, icon: Receipt },
-    { id: 'stock', label: isMr ? 'स्टॉक इन-आउट' : 'Stock In & Out', icon: Truck },
-    { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
-    { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
-    { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी' : 'Licensing & Approvals', icon: ShieldCheck, ownerOnly: true },
-    { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
-    { id: 'admin', label: t.adminPanel, icon: Settings },
-    { id: 'code_center', label: t.devCenter, icon: Code },
-  ];
+  const menuItems = session?.role === 'system_admin'
+    ? [
+        { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी आणि वर्गणी' : 'Licensing & Subscriptions', icon: ShieldCheck }
+      ]
+    : [
+        { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
+        { id: 'products', label: t.products, icon: Package },
+        { id: 'billing', label: t.billing, icon: Receipt },
+        { id: 'stock', label: isMr ? 'स्टॉक इन-आउट' : 'Stock In & Out', icon: Truck },
+        { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
+        { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
+        { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी' : 'Licensing & Approvals', icon: ShieldCheck, ownerOnly: true },
+        { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
+        { id: 'admin', label: t.adminPanel, icon: Settings },
+        { id: 'code_center', label: t.devCenter, icon: Code },
+      ];
 
   if (isRegistering) {
     return (
@@ -1354,48 +1359,50 @@ export default function App() {
             </div>
 
             {/* Elegant Mobile Bottom Navigation Bar (Floating Dock Style) */}
-            <div className={`fixed bottom-0 left-0 right-0 z-30 md:hidden border-t px-2 py-2.5 flex justify-around items-center shadow-2xl backdrop-blur-md transition-colors ${darkMode ? 'bg-slate-900/95 border-slate-800 text-slate-300' : 'bg-white/95 border-slate-200 text-slate-600'}`}>
-              <button
-                id="bottom-nav-dashboard"
-                onClick={() => setCurrentView('dashboard')}
-                className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'dashboard' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                <LayoutDashboard size={18} />
-                <span className="text-[10px] scale-90 font-medium">{t.dashboard}</span>
-              </button>
-              <button
-                id="bottom-nav-products"
-                onClick={() => setCurrentView('products')}
-                className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'products' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                <Package size={18} />
-                <span className="text-[10px] scale-90 font-medium">{t.products}</span>
-              </button>
-              <button
-                id="bottom-nav-billing"
-                onClick={() => setCurrentView('billing')}
-                className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'billing' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                <Receipt size={18} />
-                <span className="text-[10px] scale-90 font-medium">{t.billing}</span>
-              </button>
-              <button
-                id="bottom-nav-customers"
-                onClick={() => setCurrentView('customers_suppliers')}
-                className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'customers_suppliers' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
-              >
-                <Users size={18} />
-                <span className="text-[10px] scale-90 font-medium">{isMr ? 'ग्राहक-विक्रेता' : 'Ledgers'}</span>
-              </button>
-              <button
-                id="bottom-nav-menu"
-                onClick={() => setMobileMenuOpen(true)}
-                className="flex-1 flex flex-col items-center gap-1 transition text-slate-400 hover:text-slate-200"
-              >
-                <Menu size={18} />
-                <span className="text-[10px] scale-90 font-medium">{isMr ? 'अधिक' : 'More'}</span>
-              </button>
-            </div>
+            {session?.role !== 'system_admin' && (
+              <div className={`fixed bottom-0 left-0 right-0 z-30 md:hidden border-t px-2 py-2.5 flex justify-around items-center shadow-2xl backdrop-blur-md transition-colors ${darkMode ? 'bg-slate-900/95 border-slate-800 text-slate-300' : 'bg-white/95 border-slate-200 text-slate-600'}`}>
+                <button
+                  id="bottom-nav-dashboard"
+                  onClick={() => setCurrentView('dashboard')}
+                  className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'dashboard' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <LayoutDashboard size={18} />
+                  <span className="text-[10px] scale-90 font-medium">{t.dashboard}</span>
+                </button>
+                <button
+                  id="bottom-nav-products"
+                  onClick={() => setCurrentView('products')}
+                  className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'products' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <Package size={18} />
+                  <span className="text-[10px] scale-90 font-medium">{t.products}</span>
+                </button>
+                <button
+                  id="bottom-nav-billing"
+                  onClick={() => setCurrentView('billing')}
+                  className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'billing' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <Receipt size={18} />
+                  <span className="text-[10px] scale-90 font-medium">{t.billing}</span>
+                </button>
+                <button
+                  id="bottom-nav-customers"
+                  onClick={() => setCurrentView('customers_suppliers')}
+                  className={`flex-1 flex flex-col items-center gap-1 transition ${currentView === 'customers_suppliers' ? (darkMode ? 'text-indigo-400 font-bold' : 'text-indigo-600 font-bold') : 'text-slate-400 hover:text-slate-200'}`}
+                >
+                  <Users size={18} />
+                  <span className="text-[10px] scale-90 font-medium">{isMr ? 'ग्राहक-विक्रेता' : 'Ledgers'}</span>
+                </button>
+                <button
+                  id="bottom-nav-menu"
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="flex-1 flex flex-col items-center gap-1 transition text-slate-400 hover:text-slate-200"
+                >
+                  <Menu size={18} />
+                  <span className="text-[10px] scale-90 font-medium">{isMr ? 'अधिक' : 'More'}</span>
+                </button>
+              </div>
+            )}
 
           </main>
 
