@@ -230,12 +230,15 @@ export default function App() {
     setOtpError('');
     
     const trimmedUsername = loginUsername.toLowerCase().trim();
-    if ((trimmedUsername === 'superadmin' || trimmedUsername === 'admin') && loginPassword === 'adminpassword') {
+    if (
+      (trimmedUsername === 'superadmin' || trimmedUsername === 'admin' || trimmedUsername === 'systemadmin') && 
+      (loginPassword === 'adminpassword' || loginPassword === 'admin123')
+    ) {
       // Successful Super Admin login
       setSession({
         role: 'owner',
         mobile: '9876543210',
-        name: 'Super Admin (Platform Owner)',
+        name: 'System Admin (Platform Owner)',
         permissions: ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT']
       });
       setOtpError('');
@@ -932,7 +935,7 @@ export default function App() {
                     className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest"
                   />
                   <span className="text-[9px] text-indigo-400 font-mono block text-right mt-1">
-                    🔑 {isMr ? 'सुपर ॲडमीन युझर:' : 'Super Admin:'} <span className="font-bold underline">superadmin</span> {isMr ? 'पासवर्ड:' : 'pass:'} <span className="font-bold underline">adminpassword</span>
+                    🔑 {isMr ? 'सिस्टम ॲडमिन:' : 'System Admin:'} <span className="font-bold underline">admin</span> / {isMr ? 'पासवर्ड:' : 'pass:'} <span className="font-bold underline">admin123</span>
                   </span>
                 </div>
 
