@@ -24,7 +24,9 @@ import {
   ChevronRight,
   ShieldCheck,
   Smartphone,
-  Key
+  Key,
+  Clock,
+  AlertTriangle
 } from 'lucide-react';
 
 // Models & Types
@@ -52,7 +54,8 @@ import {
   initialAuditLogs, 
   defaultSettings,
   initialCategories,
-  initialBrands
+  initialBrands,
+  initialRegistrations
 } from './data/mockData';
 
 // Subcomponents Views
@@ -65,6 +68,11 @@ import ReportsView from './components/ReportsView';
 import OnlineShopCatalog from './components/OnlineShopCatalog';
 import AdminPanel from './components/AdminPanel';
 import CodeCenterView from './components/CodeCenterView';
+import ShopRegistrationForm from './components/ShopRegistrationForm';
+import AdminApprovalView from './components/AdminApprovalView';
+import ShopOwnerStatusDashboard from './components/ShopOwnerStatusDashboard';
+import { ShopRegistration } from './types';
+
 
 export default function App() {
   // Localization & Theme Configuration
@@ -84,6 +92,17 @@ export default function App() {
   const [otpSent, setOtpSent] = useState(false);
   const [otpError, setOtpError] = useState('');
 
+  // Shop Registrations & Admin Approval States
+  const [registrations, setRegistrations] = useState<ShopRegistration[]>(() => {
+    const stored = localStorage.getItem('vastraa_registrations');
+    return stored ? JSON.parse(stored) : initialRegistrations;
+  });
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [loginMode, setLoginMode] = useState<'otp' | 'business'>('otp');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [pendingSession, setPendingSession] = useState<ShopRegistration | null>(null);
+
   // Primary Business Collections (Reactive States simulating Cloud DB updates)
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
@@ -93,6 +112,121 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
   const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultSettings);
+
+  // Business Login verification handler
+  const handleBusinessLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setOtpError('');
+    
+    const reg = registrations.find(r => 
+      r.loginInfo.username.toLowerCase() === loginUsername.toLowerCase().trim() && 
+      r.loginInfo.password === loginPassword
+    );
+
+    if (reg) {
+      if (reg.subscription.status === 'Active') {
+        // Successful login
+        setSession({
+          role: 'owner',
+          mobile: reg.mobile,
+          name: `${reg.ownerName} (${reg.shopName})`,
+          permissions: ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT']
+        });
+        
+        // Load custom settings for the approved shop owner
+        setShopSettings({
+          ...defaultSettings,
+          shopName: reg.shopName,
+          mobile: reg.mobile,
+          whatsapp: reg.mobile,
+        });
+
+        setLoginUsername('');
+        setLoginPassword('');
+      } else {
+        // Pending approval, rejected, or more info requested
+        setPendingSession(reg);
+        setLoginUsername('');
+        setLoginPassword('');
+      }
+    } else {
+      setOtpError(isMr ? 'चुकीचे युझरनेम किंवा पासवर्ड!' : 'Invalid username or password!');
+    }
+  };
+
+  // Submit registration form handler
+  const handleRegisterBusiness = (newReg: ShopRegistration) => {
+    const updated = [newReg, ...registrations];
+    setRegistrations(updated);
+    localStorage.setItem('vastraa_registrations', JSON.stringify(updated));
+    
+    // Log auth audit trail
+    const timestamp = new Date().toISOString();
+    const newLog: AuditLog = {
+      id: 'aud-' + Date.now(),
+      timestamp,
+      userId: 'system',
+      userName: 'Platform Gatekeeper',
+      action: 'PARTNER_REGISTERED',
+      details: `New Cloth Shop registered: ${newReg.shopName} by ${newReg.ownerName}. Status: Pending review.`
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+
+    // Send newly registered user directly to status tracking dashboard
+    setPendingSession(newReg);
+    setIsRegistering(false);
+  };
+
+  // Update registration status handler (Admin/Software Owner Workflow)
+  const handleUpdateRegistrationStatus = (
+    id: string, 
+    status: 'Pending' | 'Active' | 'Rejected' | 'MoreInfoNeeded',
+    subscriptionUpdate?: {
+      subscriptionType: 'Lifetime' | '1 Month' | '3 Months' | '6 Months' | '1 Year' | 'Custom';
+      startDate: string;
+      endDate?: string;
+    },
+    notes?: string
+  ) => {
+    const updated = registrations.map(reg => {
+      if (reg.id === id) {
+        return {
+          ...reg,
+          subscription: {
+            ...reg.subscription,
+            status,
+            notes: notes || reg.subscription.notes,
+            ...(subscriptionUpdate || {})
+          }
+        };
+      }
+      return reg;
+    });
+
+    setRegistrations(updated);
+    localStorage.setItem('vastraa_registrations', JSON.stringify(updated));
+
+    // Log the action to audit database
+    const targetReg = registrations.find(r => r.id === id);
+    const timestamp = new Date().toISOString();
+    const newLog: AuditLog = {
+      id: 'aud-' + Date.now(),
+      timestamp,
+      userId: session?.role === 'owner' ? 'usr-1' : 'system',
+      userName: session?.role === 'owner' ? session.name : 'System Admin',
+      action: `PARTNER_STATUS_${status.toUpperCase()}`,
+      details: `Updated status of shop ${targetReg?.shopName || id} to ${status.toUpperCase()}. notes: ${notes || 'None'}`
+    };
+    setAuditLogs(prev => [newLog, ...prev]);
+
+    // Update active pendingSession state if it is currently viewed
+    if (pendingSession && pendingSession.id === id) {
+      const freshReg = updated.find(r => r.id === id);
+      if (freshReg) {
+        setPendingSession(freshReg);
+      }
+    }
+  };
 
   // Log an Audit Event helper
   const logEvent = (action: string, details: string) => {
@@ -106,6 +240,7 @@ export default function App() {
     };
     setAuditLogs(prev => [newLog, ...prev]);
   };
+
 
   // Simulated OTP Auth functions
   const handleRequestOtp = (e: React.FormEvent) => {
@@ -340,10 +475,31 @@ export default function App() {
     { id: 'stock', label: isMr ? 'स्टॉक इन-आउट' : 'Stock In & Out', icon: Truck },
     { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
     { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
+    { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी' : 'Licensing & Approvals', icon: ShieldCheck, ownerOnly: true },
     { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
     { id: 'admin', label: t.adminPanel, icon: Settings },
     { id: 'code_center', label: t.devCenter, icon: Code },
   ];
+
+  if (isRegistering) {
+    return (
+      <ShopRegistrationForm 
+        onBackToLogin={() => setIsRegistering(false)}
+        onSubmitRegistration={handleRegisterBusiness}
+        isMr={isMr}
+      />
+    );
+  }
+
+  if (pendingSession) {
+    return (
+      <ShopOwnerStatusDashboard 
+        registration={pendingSession}
+        onLogout={() => setPendingSession(null)}
+        isMr={isMr}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen font-sans dark bg-[#0F0F0F] text-[#E6E1E5]">
@@ -385,89 +541,201 @@ export default function App() {
               <p className="text-white/60 text-xs">{t.loginSub}</p>
             </div>
 
-            {/* OTP Form fields block */}
-            {!otpSent ? (
-              <form onSubmit={handleRequestOtp} className="space-y-4 text-left text-xs">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{t.mobileLabel}</label>
-                  <div className="relative">
-                    <Smartphone className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                    <input 
-                      type="text"
-                      required
-                      placeholder="e.g. 9876543210"
-                      value={loginMobile}
-                      onChange={(e) => setLoginMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                      className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest"
-                    />
+            {/* Auth Mode Toggle Tabs */}
+            <div className="grid grid-cols-2 gap-1 bg-white/5 p-1 rounded-xl text-xs font-semibold">
+              <button
+                id="mode-otp-btn"
+                type="button"
+                onClick={() => { setLoginMode('otp'); setOtpError(''); }}
+                className={`py-1.5 rounded-lg transition ${loginMode === 'otp' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                📱 {isMr ? 'ओटीपी लॉगिन' : 'OTP Login'}
+              </button>
+              <button
+                id="mode-business-btn"
+                type="button"
+                onClick={() => { setLoginMode('business'); setOtpError(''); }}
+                className={`py-1.5 rounded-lg transition ${loginMode === 'business' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'}`}
+              >
+                🔑 {isMr ? 'व्यवसाय लॉगिन' : 'Business Account'}
+              </button>
+            </div>
+
+            {/* Forms according to selected login mode */}
+            {loginMode === 'otp' ? (
+              !otpSent ? (
+                <form onSubmit={handleRequestOtp} className="space-y-4 text-left text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{t.mobileLabel}</label>
+                    <div className="relative">
+                      <Smartphone className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                      <input 
+                        type="text"
+                        required
+                        placeholder="e.g. 9876543210"
+                        value={loginMobile}
+                        onChange={(e) => setLoginMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                        className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest"
+                      />
+                    </div>
                   </div>
+
+                  {otpError && <p className="text-rose-400 text-[11px] font-semibold">{otpError}</p>}
+
+                  <button
+                    id="request-otp-btn"
+                    type="submit"
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 transition text-white rounded-xl text-xs font-bold font-sans tracking-wide uppercase shadow-lg shadow-indigo-600/20"
+                  >
+                    {t.getOtp}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-4 text-left text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{t.otpLabel}</label>
+                    <div className="relative">
+                      <Key className="absolute left-3 top-2.5 text-slate-400" size={16} />
+                      <input 
+                        type="text"
+                        required
+                        placeholder="6-Digit Code"
+                        value={loginOtp}
+                        onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest text-center"
+                      />
+                    </div>
+                    <span className="text-[9px] text-emerald-400 font-mono block text-right mt-1">💡 Demo Key: 123456</span>
+                  </div>
+
+                  {otpError && <p className="text-rose-400 text-[11px] font-semibold">{otpError}</p>}
+
+                  <button
+                    id="verify-otp-btn"
+                    type="submit"
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 transition text-white rounded-xl text-xs font-bold font-sans tracking-wide uppercase shadow-lg shadow-emerald-600/20"
+                  >
+                    {t.verifyOtp}
+                  </button>
+                </form>
+              )
+            ) : (
+              <form onSubmit={handleBusinessLogin} className="space-y-4 text-left text-xs">
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{isMr ? 'युझरनेम' : 'Username'}</label>
+                  <input 
+                    type="text"
+                    required
+                    placeholder={isMr ? "उदा. sanskriti_fashion" : "e.g. sanskriti_fashion"}
+                    value={loginUsername}
+                    onChange={(e) => setLoginUsername(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-wide"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{isMr ? 'पासवर्ड' : 'Password'}</label>
+                  <input 
+                    type="password"
+                    required
+                    placeholder="••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl px-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest"
+                  />
                 </div>
 
                 {otpError && <p className="text-rose-400 text-[11px] font-semibold">{otpError}</p>}
 
                 <button
-                  id="request-otp-btn"
+                  id="business-login-btn"
                   type="submit"
                   className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 transition text-white rounded-xl text-xs font-bold font-sans tracking-wide uppercase shadow-lg shadow-indigo-600/20"
                 >
-                  {t.getOtp}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleVerifyOtp} className="space-y-4 text-left text-xs">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase tracking-wider text-slate-400 font-bold block">{t.otpLabel}</label>
-                  <div className="relative">
-                    <Key className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                    <input 
-                      type="text"
-                      required
-                      placeholder="6-Digit Code"
-                      value={loginOtp}
-                      onChange={(e) => setLoginOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      className="w-full bg-white/5 border border-white/10 focus:border-indigo-500 rounded-xl pl-9 pr-3 py-2 outline-none font-mono text-sm font-bold text-white tracking-widest text-center"
-                    />
-                  </div>
-                  <span className="text-[9px] text-emerald-400 font-mono block text-right mt-1">💡 Demo Key: 123456</span>
-                </div>
-
-                {otpError && <p className="text-rose-400 text-[11px] font-semibold">{otpError}</p>}
-
-                <button
-                  id="verify-otp-btn"
-                  type="submit"
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 transition text-white rounded-xl text-xs font-bold font-sans tracking-wide uppercase shadow-lg shadow-emerald-600/20"
-                >
-                  {t.verifyOtp}
+                  {isMr ? 'खात्यामध्ये लॉगिन करा' : 'Verify & Log In'}
                 </button>
               </form>
             )}
 
+            {/* New Shop Registration CTA */}
+            <div className="p-3.5 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl space-y-1 text-xs text-left">
+              <p className="text-slate-200 font-bold">{isMr ? 'नवीन कपड्यांचे दुकान नोंदणी:' : 'New Retail Clothes Shop?'}</p>
+              <p className="text-[10px] text-slate-400 pb-2 leading-relaxed">
+                {isMr 
+                  ? 'नवीन ईआरपी पार्टनर बनण्यासाठी २ मिनिटांत ऑनलाईन नोंदणी करा व डिजिटल बिले सुरू करा.' 
+                  : 'Register your shop profile and upload municipal approvals to activate your premium billing workspace.'}
+              </p>
+              <button
+                id="trigger-register-btn"
+                type="button"
+                onClick={() => { setIsRegistering(true); setOtpError(''); }}
+                className="w-full py-2 bg-gradient-to-r from-pink-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white rounded-xl text-xs font-extrabold tracking-wide uppercase shadow-md transition"
+              >
+                ✨ {isMr ? 'नवीन दुकान नोंदणी करा' : 'Register Your Shop Now'}
+              </button>
+            </div>
+
             {/* Quick Testing logins emulator layout */}
-            <div className="border-t border-white/10 pt-4 space-y-3">
-              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">Fast-Track Demo Login</span>
-              <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="border-t border-white/10 pt-4 space-y-2.5">
+              <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block text-left">Fast-Track Live Testing Demo</span>
+              
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                {/* 1. Primary owner */}
                 <button
                   id="demo-login-owner"
                   onClick={() => fastLogin('owner')}
-                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex flex-col items-center gap-1 text-center"
+                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
                 >
-                  <ShieldCheck size={16} className="text-indigo-400" />
-                  <span className="font-bold text-white/90">Owner Profile</span>
-                  <span className="text-[9px] text-slate-400 font-mono">Full Privileges</span>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-indigo-400 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white/90 block leading-none">Platform Owner / Admin</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">Review shops & authorize licensing plans</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500" />
                 </button>
 
+                {/* 2. Review pending */}
                 <button
-                  id="demo-login-employee"
-                  onClick={() => fastLogin('employee')}
-                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex flex-col items-center gap-1 text-center"
+                  id="demo-preview-pending"
+                  onClick={() => {
+                    const pendingShop = registrations.find(r => r.id === 'reg-2026-001') || registrations[0];
+                    if (pendingShop) setPendingSession(pendingShop);
+                  }}
+                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
                 >
-                  <Users size={16} className="text-pink-400" />
-                  <span className="font-bold text-white/90">Staff Profile</span>
-                  <span className="text-[9px] text-slate-400 font-mono">Restricted POS</span>
+                  <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-amber-400 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white/90 block leading-none">View "Pending Review" Shop Dashboard</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">Status of newly submitted store "Sanskriti Fashion"</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500" />
+                </button>
+
+                {/* 3. Review rejected/more info */}
+                <button
+                  id="demo-preview-rejected"
+                  onClick={() => {
+                    const infoShop = registrations.find(r => r.id === 'reg-2026-003') || registrations[2];
+                    if (infoShop) setPendingSession(infoShop);
+                  }}
+                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle size={16} className="text-indigo-400 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white/90 block leading-none">View "Action Required" Dashboard</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">Status feedback from admin on "Kids Planet Clothes"</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500" />
                 </button>
               </div>
             </div>
+
 
           </motion.div>
         </div>
@@ -748,6 +1016,14 @@ export default function App() {
                       isMr={isMr}
                       onUpdateSettings={(newSettings) => setShopSettings(newSettings)}
                       onToggleUserRole={(role) => setSession({ ...session, role })}
+                    />
+                  )}
+
+                  {currentView === 'approvals' && (
+                    <AdminApprovalView 
+                      registrations={registrations}
+                      onUpdateStatus={handleUpdateRegistrationStatus}
+                      isMr={isMr}
                     />
                   )}
 

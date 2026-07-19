@@ -341,3 +341,105 @@ export const defaultSettings: ShopSettings = {
   templateReminder: 'Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *{shopName}* of amount *₹{grandTotal}*. Please clear via UPI.',
   templateOffer: 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!'
 };
+
+export const initialRegistrations: any[] = [
+  {
+    id: 'reg-2026-001',
+    shopName: 'Sanskriti Fashion Hub',
+    ownerName: 'Deepak Patil',
+    mobile: '9123456789',
+    email: 'deepak.patil@sanskritifashion.in',
+    gstNumber: '27ABCDE5555M1Z9',
+    businessRegNumber: 'MH-PN-2026-B9921',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411030',
+    loginInfo: {
+      username: 'sanskriti_fashion',
+      password: 'password123'
+    },
+    shopDetails: {
+      shopType: "Women's Wear",
+      employeesCount: 4,
+      openingDate: '2024-11-12'
+    },
+    documents: {
+      ownerIdProof: 'deepak_patil_aadhaar_card.pdf',
+      shopLicense: 'gumasta_license_2024.pdf',
+      gstCertificate: 'gst_reg_06_sanskriti.pdf',
+      shopPhoto: 'sanskriti_store_front.jpg'
+    },
+    subscription: {
+      status: 'Pending',
+      subscriptionType: '1 Year',
+      notes: 'Submitted on 18th July. Seeking premium license.'
+    },
+    createdAt: '2026-07-18T10:11:00.000Z'
+  },
+  {
+    id: 'reg-2026-002',
+    shopName: 'Vastraa Trends',
+    ownerName: 'Sneha Deshmukh',
+    mobile: '8888888888',
+    email: 'sneha@vastraatrends.com',
+    gstNumber: '27XYZAB7777N1ZC',
+    businessRegNumber: 'MH-MUM-2025-X0109',
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    pincode: '400001',
+    loginInfo: {
+      username: 'vastraa_trends',
+      password: 'password123'
+    },
+    shopDetails: {
+      shopType: "Boutique",
+      employeesCount: 3,
+      openingDate: '2025-05-20'
+    },
+    documents: {
+      ownerIdProof: 'sneha_deshmukh_pan.pdf',
+      shopLicense: 'gumasta_mumbai_sneha.pdf',
+      gstCertificate: 'gst_certificate_vastraatrends.pdf',
+      shopPhoto: 'vastraa_trends_interior.jpg'
+    },
+    subscription: {
+      status: 'Active',
+      subscriptionType: 'Lifetime',
+      startDate: '2026-07-15',
+      notes: 'Approved by Admin Rahul on 15th July with Lifetime loyalty package.'
+    },
+    createdAt: '2026-07-15T08:22:00.000Z'
+  },
+  {
+    id: 'reg-2026-003',
+    shopName: 'Kids Planet Clothes',
+    ownerName: 'Prasad Shinde',
+    mobile: '7777777777',
+    email: 'prasad@kidsplanet.in',
+    gstNumber: undefined,
+    businessRegNumber: undefined,
+    city: 'Kolhapur',
+    state: 'Maharashtra',
+    pincode: '416001',
+    loginInfo: {
+      username: 'kids_planet',
+      password: 'password123'
+    },
+    shopDetails: {
+      shopType: "Kids Wear",
+      employeesCount: 2,
+      openingDate: '2026-02-15'
+    },
+    documents: {
+      ownerIdProof: 'prasad_shinde_aadhaar.pdf',
+      shopPhoto: 'kids_planet_signboard.jpg'
+    },
+    subscription: {
+      status: 'MoreInfoNeeded',
+      subscriptionType: '3 Months',
+      notes: 'Requesting shop license / Gumasta. Uploaded owner ID but missing municipal license.'
+    },
+    createdAt: '2026-07-17T14:45:00.000Z'
+  }
+];
+

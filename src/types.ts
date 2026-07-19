@@ -258,3 +258,40 @@ export interface AppTranslations {
   shareWhatsApp: string;
   printBill: string;
 }
+
+export interface ShopRegistration {
+  id: string;
+  shopName: string;
+  ownerName: string;
+  mobile: string;
+  email: string;
+  gstNumber?: string;
+  businessRegNumber?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  loginInfo: {
+    username: string;
+    password: string;
+  };
+  shopDetails: {
+    shopType: string;
+    employeesCount: number;
+    openingDate: string;
+  };
+  documents: {
+    ownerIdProof: string;
+    shopLicense?: string;
+    gstCertificate?: string;
+    shopPhoto?: string;
+  };
+  subscription: {
+    status: 'Pending' | 'Active' | 'Rejected' | 'MoreInfoNeeded';
+    subscriptionType: 'Lifetime' | '1 Month' | '3 Months' | '6 Months' | '1 Year' | 'Custom';
+    startDate?: string;
+    endDate?: string;
+    notes?: string;
+  };
+  createdAt: string;
+}
+
