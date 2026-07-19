@@ -1,0 +1,8 @@
+{
+  "appId": "com.vastraaerp.app",
+  "appName": "Vastraa ERP",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}
