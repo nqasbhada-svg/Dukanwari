@@ -30,7 +30,10 @@ import {
   Wifi,
   RefreshCw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  Download,
+  ArrowLeft
 } from 'lucide-react';
 import { auth, googleAuthProvider, signInWithPopup } from './utils/firebase.ts';
 
@@ -145,6 +148,40 @@ export default function App() {
     const stored = localStorage.getItem('vastraa_shopSettings');
     return stored ? JSON.parse(stored) : defaultSettings;
   });
+
+  // Public Invoice & Outstanding Billing Router
+  const [invoicePreviewId, setInvoicePreviewId] = useState<string | null>(() => {
+    if (typeof window !== 'undefined') {
+      const path = window.location.pathname;
+      const match = path.match(/^\/invoice-preview\/([^/]+)/);
+      return match ? match[1] : null;
+    }
+    return null;
+  });
+
+  const [isOutstandingView, setIsOutstandingView] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.location.pathname === '/outstanding-view';
+    }
+    return false;
+  });
+
+  const [outstandingSearchMobile, setOutstandingSearchMobile] = useState<string>('');
+  const [hasSearchedOutstanding, setHasSearchedOutstanding] = useState<boolean>(false);
+  const [publicPreviewTemplate, setPublicPreviewTemplate] = useState<'thermal' | 'a4'>('a4');
+  const [isLoadingCloudData, setIsLoadingCloudData] = useState<boolean>(true);
+
+  // Sync state with popstate (browser back/forward buttons)
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const match = path.match(/^\/invoice-preview\/([^/]+)/);
+      setInvoicePreviewId(match ? match[1] : null);
+      setIsOutstandingView(path === '/outstanding-view');
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const stored = localStorage.getItem('vastraa_categories');
@@ -267,6 +304,7 @@ export default function App() {
   useEffect(() => {
     const loadCloudData = async () => {
       try {
+        setIsLoadingCloudData(true);
         const [
           regsRes,
           productsRes,
@@ -297,6 +335,8 @@ export default function App() {
         if (settingsRes) setShopSettings(settingsRes);
       } catch (err) {
         console.warn('Failed to load initial data from Cloud SQL. Using local fallback:', err);
+      } finally {
+        setIsLoadingCloudData(false);
       }
     };
     loadCloudData();
@@ -894,6 +934,476 @@ export default function App() {
     setProducts(prev => prev.map(p => p.id === productId ? { ...p, currentStock: p.currentStock + qty } : p));
   };
 
+  // Public route render: Invoice Preview Page
+  const renderPublicInvoiceView = () => {
+    if (isLoadingCloudData) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0F0F0F] text-slate-100 p-4 font-sans">
+          <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
+          <p className="text-sm font-medium text-slate-400">Loading invoice details...</p>
+        </div>
+      );
+    }
+
+    const activeInvoice = invoices.find(inv => inv.invoiceNumber === invoicePreviewId);
+
+    if (!activeInvoice) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0F0F0F] text-slate-100 p-4 font-sans text-center">
+          <AlertTriangle className="text-amber-500 mb-4" size={48} />
+          <h2 className="text-xl font-bold mb-2">Invoice Not Found</h2>
+          <p className="text-sm text-slate-400 mb-6 max-w-sm">The invoice number "{invoicePreviewId}" was not found or has been archived.</p>
+          <button 
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              setInvoicePreviewId(null);
+            }}
+            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold font-sans transition shadow-md"
+          >
+            Go to Portal
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
+        {/* Public Header */}
+        <header className="bg-slate-950 border-b border-slate-800 px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-md print:hidden">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="text-indigo-500" size={20} />
+            <div>
+              <h1 className="text-sm font-bold tracking-tight text-white uppercase">{shopSettings.shopName}</h1>
+              <p className="text-[10px] text-slate-400">Digital Bill Portal</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex border border-slate-800 rounded-lg p-0.5 bg-slate-900 text-[10px] font-bold">
+              <button 
+                onClick={() => setPublicPreviewTemplate('a4')}
+                className={`px-2.5 py-1 rounded-md transition ${publicPreviewTemplate === 'a4' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              >
+                A4 GST
+              </button>
+              <button 
+                onClick={() => setPublicPreviewTemplate('thermal')}
+                className={`px-2.5 py-1 rounded-md transition ${publicPreviewTemplate === 'thermal' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              >
+                Thermal
+              </button>
+            </div>
+
+            <button 
+              onClick={() => window.print()}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+            >
+              <Printer size={13} />
+              <span className="hidden sm:inline">Print / Save PDF</span>
+            </button>
+
+            <button 
+              onClick={() => {
+                window.history.pushState({}, '', '/');
+                setInvoicePreviewId(null);
+              }}
+              className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition"
+            >
+              Close
+            </button>
+          </div>
+        </header>
+
+        {/* Invoice Container */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center items-start print:bg-white print:p-0">
+          <div className="w-full flex justify-center print:block">
+            {publicPreviewTemplate === 'a4' ? (
+              <div className="bg-white p-8 w-full max-w-2xl border border-slate-200 rounded-2xl shadow-xl font-sans space-y-6 text-slate-800 print:shadow-none print:border-none print:p-0 print:max-w-none">
+                {/* Company Header */}
+                <div className="flex justify-between items-start border-b border-slate-200 pb-4">
+                  <div className="space-y-1">
+                    <h2 className="text-lg font-bold text-indigo-950 tracking-tight leading-none uppercase">{shopSettings.shopName}</h2>
+                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest font-mono">Premium Fashion Emporium</span>
+                    <p className="text-[10px] text-slate-500 leading-relaxed max-w-xs">{shopSettings.address}</p>
+                    <p className="text-[10px] text-slate-500">Mob: {shopSettings.mobile} | WhatsApp: {shopSettings.whatsapp}</p>
+                  </div>
+                  <div className="text-right space-y-1 bg-indigo-50 border border-indigo-100/60 p-2.5 rounded-lg">
+                    <h4 className="text-indigo-900 font-bold tracking-tight text-xs uppercase">{activeInvoice.type} TAX INVOICE</h4>
+                    <p className="text-[9px] font-mono font-semibold text-slate-600">GSTIN: {shopSettings.gstNumber}</p>
+                  </div>
+                </div>
+
+                {/* Customer Details & Invoice identifiers */}
+                <div className="grid grid-cols-2 gap-4 text-[10px]">
+                  <div className="space-y-1">
+                    <h4 className="font-bold text-slate-500 uppercase tracking-wider font-mono">Bill To Customer:</h4>
+                    <p className="text-xs font-bold text-slate-900">{activeInvoice.customerName}</p>
+                    <p className="text-slate-500">Contact: +91 {activeInvoice.customerMobile}</p>
+                    {customers.find(c => c.id === activeInvoice.customerId)?.address && (
+                      <p className="text-slate-400">Address: {customers.find(c => c.id === activeInvoice.customerId)?.address}</p>
+                    )}
+                    {customers.find(c => c.id === activeInvoice.customerId)?.gstNumber && (
+                      <p className="text-indigo-600 font-mono font-semibold">GSTIN: {customers.find(c => c.id === activeInvoice.customerId)?.gstNumber}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-right">
+                    <h4 className="font-bold text-slate-500 uppercase tracking-wider font-mono">Invoice Credentials:</h4>
+                    <p className="text-slate-600">Invoice ID: <strong className="font-mono text-slate-900">{activeInvoice.invoiceNumber}</strong></p>
+                    <p className="text-slate-600">Bill Date: <strong className="font-mono text-slate-900">{activeInvoice.date}</strong></p>
+                    <p className="text-slate-600">Payment Mode: <strong className="font-mono text-slate-900">{activeInvoice.paymentMode}</strong></p>
+                    <p className="text-slate-600">Status: <span className="text-emerald-600 font-bold">{activeInvoice.status}</span></p>
+                  </div>
+                </div>
+
+                {/* Items list mapping table */}
+                <table className="w-full text-left text-[10px] border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-slate-500 uppercase font-mono border-y border-slate-200">
+                      <th className="py-2 px-1 text-center">#</th>
+                      <th className="py-2 px-2">Garment Description</th>
+                      <th className="py-2 px-1 font-mono text-center">HSN</th>
+                      <th className="py-2 px-1 text-right font-mono">Rate (₹)</th>
+                      <th className="py-2 px-1 text-center">Qty</th>
+                      <th className="py-2 px-1 text-right font-mono">GST</th>
+                      <th className="py-2 px-1 text-right font-mono">Total (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {activeInvoice.items.map((it, i) => (
+                      <tr key={i} className="text-slate-700">
+                        <td className="py-2.5 px-1 text-center font-mono">{i + 1}</td>
+                        <td className="py-2.5 px-2 font-semibold">
+                          {it.itemName}
+                          <span className="text-[9px] text-slate-400 font-normal block">Size: {it.size} | Color: {it.color}</span>
+                        </td>
+                        <td className="py-2.5 px-1 text-center font-mono text-slate-500">{it.hsn || '-'}</td>
+                        <td className="py-2.5 px-1 text-right font-mono">₹{it.rate}</td>
+                        <td className="py-2.5 px-1 text-center font-mono font-semibold">{it.quantity}</td>
+                        <td className="py-2.5 px-1 text-right font-mono text-slate-500">{it.gstPercent}%</td>
+                        <td className="py-2.5 px-1 text-right font-mono font-bold">₹{it.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Calculations subtable summaries */}
+                <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-[10px]">
+                  <div className="space-y-1 leading-relaxed text-slate-400">
+                    <p className="font-bold text-slate-500 uppercase tracking-wide">Terms & Conditions:</p>
+                    <p>1. Goods once sold will not be returned, only exchanged within 7 days.</p>
+                    <p>2. Subject to Pune jurisdiction only.</p>
+                    <p>3. Dynamic warranty claims apply to premium fabrics only.</p>
+                  </div>
+
+                  <div className="space-y-1.5 font-sans">
+                    <div className="flex justify-between text-slate-500">
+                      <span>Items Subtotal:</span>
+                      <span className="font-mono font-medium">₹{activeInvoice.subtotal.toLocaleString()}</span>
+                    </div>
+                    {activeInvoice.discount > 0 && (
+                      <div className="flex justify-between text-emerald-600 font-semibold">
+                        <span>Less Discount:</span>
+                        <span className="font-mono">-₹{activeInvoice.discount.toLocaleString()}</span>
+                      </div>
+                    )}
+                    {activeInvoice.type === 'GST' && (
+                      <div className="flex justify-between text-slate-400 text-[9px]">
+                        <span>GST Tax Component (Incl.):</span>
+                        <span className="font-mono">₹{activeInvoice.taxAmount}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between font-bold text-slate-900 border-t border-slate-100 pt-1.5 text-xs">
+                      <span>Invoice Total:</span>
+                      <span className="font-mono text-indigo-700">₹{activeInvoice.grandTotal.toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* A4 signing and validation seals */}
+                <div className="flex justify-between items-end pt-8 text-[9px] text-slate-400">
+                  <div className="space-y-1 text-center">
+                    <div className="w-24 border-b border-slate-200 mx-auto h-8"></div>
+                    <p>Customer Signature</p>
+                  </div>
+                  <div className="space-y-1 text-center font-semibold text-slate-600">
+                    <p>For {shopSettings.shopName}</p>
+                    <div className="w-24 h-8 bg-indigo-50/50 border border-indigo-100 rounded flex items-center justify-center italic text-indigo-600 text-[8px] font-mono">SEAL & SIGN</div>
+                    <p>Authorized Representative</p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Thermal Receipt layout */
+              <div className="bg-white p-4 w-[280px] border border-slate-200 rounded-lg shadow-xl font-mono text-[9px] text-slate-800 space-y-3 print:shadow-none print:border-none print:m-0">
+                <div className="text-center space-y-1">
+                  <h3 className="font-bold text-xs leading-none uppercase">{shopSettings.shopName}</h3>
+                  <p className="text-[8px] leading-tight text-slate-500">{shopSettings.address}</p>
+                  <p className="text-[8px] text-slate-500">Mobile: {shopSettings.mobile}</p>
+                  <p className="text-[8px]">=============================</p>
+                </div>
+
+                <div className="space-y-0.5 text-left text-slate-600">
+                  <p>Bill No: {activeInvoice.invoiceNumber}</p>
+                  <p>Date: {activeInvoice.date}</p>
+                  <p>Customer: {activeInvoice.customerName}</p>
+                  <p>Mob: +91 {activeInvoice.customerMobile}</p>
+                  <p className="text-center">-----------------------------</p>
+                </div>
+
+                <div className="space-y-1 text-left">
+                  {activeInvoice.items.map((it, idx) => (
+                    <div key={idx} className="flex justify-between leading-tight">
+                      <div>
+                        <p className="font-bold">{it.itemName} ({it.size})</p>
+                        <p className="text-slate-500">1x ₹{it.rate}</p>
+                      </div>
+                      <p className="font-bold">₹{it.total}</p>
+                    </div>
+                  ))}
+                  <p className="text-center text-slate-400">-----------------------------</p>
+                </div>
+
+                <div className="space-y-1 text-right">
+                  <div className="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span>₹{activeInvoice.subtotal}</span>
+                  </div>
+                  {activeInvoice.discount > 0 && (
+                    <div className="flex justify-between text-emerald-600">
+                      <span>Discount:</span>
+                      <span>-₹{activeInvoice.discount}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-bold text-[10px] text-slate-900 border-t border-dashed border-slate-300 pt-1">
+                    <span>Grand Total:</span>
+                    <span>₹{activeInvoice.grandTotal}</span>
+                  </div>
+                  <p className="text-[8px] text-center text-slate-400 pt-2">Thank you! Visit again.</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Public route render: Outstanding Bills checking portal
+  const renderPublicOutstandingView = () => {
+    if (isLoadingCloudData) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-[#0F0F0F] text-slate-100 p-4 font-sans">
+          <RefreshCw className="animate-spin text-indigo-500 mb-3" size={32} />
+          <p className="text-sm font-medium text-slate-400">Loading outstanding registry...</p>
+        </div>
+      );
+    }
+
+    const cleanPhone = (p: string) => p.replace(/\D/g, '');
+    const matchedCustomer = customers.find(c => {
+      const cleanC = cleanPhone(c.mobile);
+      const cleanS = cleanPhone(outstandingSearchMobile);
+      if (!cleanS || !cleanC) return false;
+      return cleanC === cleanS || cleanC.endsWith(cleanS) || cleanS.endsWith(cleanC);
+    });
+
+    const pendingInvoices = matchedCustomer 
+      ? invoices.filter(inv => inv.customerId === matchedCustomer.id && (inv.status === 'Unpaid' || inv.status === 'Partial'))
+      : [];
+
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
+        {/* Public Header */}
+        <header className="bg-slate-950 border-b border-slate-800 px-4 py-3 sticky top-0 z-30 flex items-center justify-between shadow-md">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="text-pink-500" size={20} />
+            <div>
+              <h1 className="text-sm font-bold tracking-tight text-white uppercase">{shopSettings.shopName}</h1>
+              <p className="text-[10px] text-slate-400">Payment & Ledger Portal</p>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => {
+              window.history.pushState({}, '', '/');
+              setIsOutstandingView(false);
+              setHasSearchedOutstanding(false);
+              setOutstandingSearchMobile('');
+            }}
+            className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-md"
+          >
+            Home / Login
+          </button>
+        </header>
+
+        {/* Portal Center Container */}
+        <div className="flex-1 p-4 md:p-8 flex items-center justify-center overflow-y-auto">
+          {!hasSearchedOutstanding ? (
+            /* Search mobile prompt block */
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-md bg-slate-950 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-2xl text-center"
+            >
+              <div className="mx-auto w-14 h-14 bg-gradient-to-tr from-pink-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/20">
+                <Users className="text-white" size={28} />
+              </div>
+
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-bold tracking-tight text-white">Check Outstanding Dues</h2>
+                <p className="text-slate-400 text-xs">Enter your 10-digit registered mobile number to see outstanding dues and generate UPI payment link.</p>
+              </div>
+
+              <form onSubmit={(e) => { e.preventDefault(); setHasSearchedOutstanding(true); }} className="space-y-4">
+                <input 
+                  type="tel"
+                  required
+                  maxLength={10}
+                  pattern="[0-9]{10}"
+                  placeholder="e.g. 9876543210"
+                  value={outstandingSearchMobile}
+                  onChange={(e) => setOutstandingSearchMobile(e.target.value.replace(/\D/g, ''))}
+                  className="w-full px-4 py-3 bg-slate-900 border border-slate-800 text-white text-center tracking-widest text-lg font-bold rounded-xl focus:border-indigo-500 outline-none transition font-mono"
+                />
+
+                <button 
+                  type="submit"
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 font-bold text-xs rounded-xl transition shadow-lg shadow-indigo-600/15"
+                >
+                  Verify Account
+                </button>
+              </form>
+            </motion.div>
+          ) : !matchedCustomer ? (
+            /* Customer not found block */
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="w-full max-w-md bg-slate-950 border border-slate-800 p-8 rounded-3xl space-y-6 shadow-2xl text-center"
+            >
+              <AlertTriangle className="text-amber-500 mx-auto" size={44} />
+              
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-bold text-white">No Record Found</h3>
+                <p className="text-slate-400 text-xs leading-relaxed">
+                  We could not find a registered customer with mobile number <span className="font-mono text-white font-bold">+91 {outstandingSearchMobile}</span>.
+                </p>
+              </div>
+
+              <button 
+                onClick={() => setHasSearchedOutstanding(false)}
+                className="w-full py-2.5 bg-slate-800 hover:bg-slate-700 font-semibold text-xs rounded-xl transition"
+              >
+                Try Another Mobile Number
+              </button>
+            </motion.div>
+          ) : (
+            /* Matched customer balance details dashboard */
+            <motion.div 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-2xl bg-slate-950 border border-slate-800 p-6 md:p-8 rounded-3xl space-y-6 shadow-2xl text-left"
+            >
+              {/* Account Overview bar */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
+                <div>
+                  <span className="text-[10px] text-indigo-400 font-mono font-bold uppercase tracking-widest">Active Ledger Profile</span>
+                  <h3 className="text-xl font-bold text-white">{matchedCustomer.name}</h3>
+                  <p className="text-xs text-slate-400 font-mono">+91 {matchedCustomer.mobile}</p>
+                </div>
+                
+                <div className="bg-slate-900 border border-slate-800 px-5 py-3 rounded-2xl text-right">
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Net Outstanding Balance</p>
+                  <p className="text-2xl font-black text-rose-500 font-mono">₹{matchedCustomer.outstanding.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* List of Pending/Outstanding Bills */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider">Pending Bills ({pendingInvoices.length})</h4>
+                  
+                  {pendingInvoices.length === 0 ? (
+                    <div className="p-5 text-center bg-slate-900/40 border border-slate-900 rounded-2xl">
+                      <CheckCircle2 className="text-emerald-500 mx-auto mb-2" size={24} />
+                      <p className="text-xs font-bold text-white">All Dues Cleared!</p>
+                      <p className="text-[10px] text-slate-500 mt-1">Thank you for your timely payments.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                      {pendingInvoices.map((inv, idx) => (
+                        <div key={idx} className="p-3 bg-slate-900/60 border border-slate-800/60 rounded-xl flex items-center justify-between text-xs hover:border-slate-700 transition">
+                          <div>
+                            <p className="font-bold font-mono text-white">{inv.invoiceNumber}</p>
+                            <p className="text-[10px] text-slate-500">{inv.date}</p>
+                          </div>
+                          
+                          <div className="text-right flex items-center gap-3">
+                            <div>
+                              <p className="font-bold text-rose-400 font-mono">₹{inv.grandTotal}</p>
+                              <span className="text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded font-bold uppercase">{inv.status}</span>
+                            </div>
+                            
+                            <button 
+                              onClick={() => {
+                                window.history.pushState({}, '', `/invoice-preview/${inv.invoiceNumber}`);
+                                setInvoicePreviewId(inv.invoiceNumber);
+                              }}
+                              className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition"
+                              title="View Full Bill"
+                            >
+                              <ArrowLeft size={12} className="rotate-180" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Secure UPI Payment section */}
+                <div className="space-y-3 flex flex-col items-center justify-center p-4 bg-slate-900/30 border border-slate-800/40 rounded-2xl text-center">
+                  <h4 className="text-xs font-bold uppercase text-slate-400 tracking-wider w-full text-center">Instant Settlement via UPI QR</h4>
+                  
+                  {matchedCustomer.outstanding <= 0 ? (
+                    <p className="text-xs text-slate-500 py-8">No payment needed as your account balance is zero.</p>
+                  ) : (
+                    <>
+                      <div className="bg-white p-2 rounded-xl inline-block border border-slate-200">
+                        <img 
+                          referrerPolicy="no-referrer"
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=vastraa_payments@okaxis&pn=${encodeURIComponent(shopSettings.shopName)}&am=${matchedCustomer.outstanding}&cu=INR`)}`}
+                          alt="UPI Payment QR Code"
+                          className="w-28 h-28"
+                        />
+                      </div>
+                      
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold text-emerald-400">Scan to settle ₹{matchedCustomer.outstanding}</p>
+                        <p className="text-[8px] text-slate-500 max-w-[220px] leading-relaxed mx-auto">Supports GPay, PhonePe, Paytm, and other standard UPI payment apps.</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Action bar */}
+              <div className="flex justify-between pt-4 border-t border-slate-800/80">
+                <button 
+                  onClick={() => setHasSearchedOutstanding(false)}
+                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 rounded-xl text-xs font-semibold transition"
+                >
+                  Change Account / Back
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Navigation menu links mapping
   const menuItems = session?.role === 'system_admin'
     ? [
@@ -911,6 +1421,15 @@ export default function App() {
         { id: 'admin', label: t.adminPanel, icon: Settings, ownerOnly: true },
         { id: 'code_center', label: t.devCenter, icon: Code },
       ];
+
+  // Intercept for public routing
+  if (invoicePreviewId) {
+    return renderPublicInvoiceView();
+  }
+
+  if (isOutstandingView) {
+    return renderPublicOutstandingView();
+  }
 
   if (isRegistering) {
     return (

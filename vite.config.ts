@@ -4,8 +4,9 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
+  const isCapacitor = process.env.CAPACITOR_BUILD === 'true';
   return {
-    base: './',
+    base: isCapacitor ? './' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
