@@ -7,196 +7,98 @@
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
-/* Elegant Dark CSS Theme Overrides */
-:root, .light, .dark {
-  background-color: #0F0F0F !important;
-  color: #E6E1E5 !important;
+/* Beautiful, Vibrant and Colourful Global Themes */
+:root {
+  --bg-primary-dark: #080512;
+  --bg-secondary-dark: #120e2e;
+  --bg-tertiary-dark: #1e1945;
+  --text-primary-dark: #f3f1fa;
+  --text-secondary-dark: #b6afdb;
 }
 
+/* Base Body Styles */
 body {
-  background-color: #0F0F0F !important;
-  color: #E6E1E5 !important;
+  font-family: var(--font-sans);
+  background: radial-gradient(circle at 50% 50%, #150f38 0%, #070414 100%);
+  background-attachment: fixed;
+  color: var(--text-primary-dark);
 }
 
-/* Container Backgrounds - Primary background is #0F0F0F */
-.bg-slate-50, 
-.bg-slate-950, 
-.bg-radial,
-.bg-indigo-50\/40,
-.from-slate-900,
-.to-slate-950,
-.bg-slate-50\/20,
-.bg-indigo-50\/20 {
-  background-color: #0F0F0F !important;
-  background-image: none !important;
-}
-
-/* Secondary Container Backgrounds - Sidebar, Panels, Cards, Modals use #1C1B1F */
-.bg-white, 
-.bg-slate-900, 
-.dark\:bg-slate-900,
-.bg-slate-50\/80,
-.bg-slate-50\/50,
-.bg-slate-50\/30,
-.hover\:bg-slate-50\/40:hover,
-.hover\:bg-slate-50:hover,
-.hover\:bg-slate-50\/80:hover {
-  background-color: #1C1B1F !important;
-}
-
-/* Input Fields, Pill Buttons, Tables Header use #2B2930 */
-input[type="text"], 
-input[type="number"], 
-select, 
-textarea, 
-.bg-slate-100,
-.bg-slate-200,
-.bg-indigo-50,
-.bg-indigo-100,
-.bg-slate-50\/50,
-.bg-slate-50\/10,
-.bg-indigo-50\/10 {
-  background-color: #2B2930 !important;
-  color: #E6E1E5 !important;
-}
-
-/* Borders - Standard Border uses #49454F */
-.border, 
-.border-b, 
-.border-t, 
-.border-l, 
-.border-r, 
-.border-slate-100,
-.border-slate-200, 
-.border-slate-800, 
-.dark\:border-slate-800, 
-.border-slate-200\/80, 
-.divide-y > *,
-.divide-slate-100 > * {
-  border-color: #49454F !important;
-}
-
-/* Primary Typography and Heading colors use #E6E1E5 */
-h1, h2, h3, h4, h5, h6,
-.text-slate-900, 
-.text-slate-800, 
-.text-indigo-950, 
-.text-emerald-950, 
-.text-rose-950, 
-.text-amber-950,
-.dark\:text-slate-100,
-.text-slate-700 {
-  color: #E6E1E5 !important;
-}
-
-/* Caption and Secondary Typography uses #938F99 */
-.text-slate-400, 
-.text-slate-500, 
-.dark\:text-slate-400 {
-  color: #938F99 !important;
-}
-
-/* Light Gray / Unselected text uses #CAC4D0 */
-.text-slate-300, 
-.text-slate-600 {
-  color: #CAC4D0 !important;
-}
-
-/* Highlight / Active Items - Purple/Lavender uses #D0BCFF, text #381E72 */
-.bg-indigo-600,
-.bg-gradient-to-tr,
-.bg-radial.from-pink-500 {
-  background-color: #D0BCFF !important;
-  background-image: none !important;
-  color: #381E72 !important;
-}
-
-.bg-indigo-600 *,
-.bg-gradient-to-tr * {
-  color: #381E72 !important;
-}
-
-.bg-indigo-600:hover {
-  background-color: #E3D7FF !important;
-}
-
-/* Accent texts use #D0BCFF */
-.text-indigo-600, 
-.text-indigo-700,
-.text-indigo-600 *,
-.text-indigo-700 * {
-  color: #D0BCFF !important;
-}
-
-/* Success / Connection - Green uses #B2F2BB */
-.bg-emerald-600 {
-  background-color: #B2F2BB !important;
-  color: #1A3E21 !important;
-}
-
-.bg-emerald-600:hover {
-  background-color: #CFFAD4 !important;
-}
-
-.text-emerald-600, 
-.text-emerald-700,
-.text-emerald-600 *,
-.text-emerald-700 * {
-  color: #B2F2BB !important;
-}
-
-.bg-emerald-50,
-.bg-emerald-50\/20,
-.bg-emerald-50\/30 {
-  background-color: rgba(178, 242, 187, 0.1) !important;
-}
-
-/* Alert / Warning - Red uses #F2B8B5 */
-.bg-rose-600, 
-.bg-amber-600 {
-  background-color: #F2B8B5 !important;
-  color: #601410 !important;
-}
-
-.text-rose-600, 
-.text-rose-700, 
-.text-amber-600, 
-.text-amber-700,
-.text-rose-600 *, 
-.text-rose-700 *, 
-.text-amber-600 *, 
-.text-amber-700 * {
-  color: #F2B8B5 !important;
-}
-
-.bg-rose-50, 
-.bg-rose-50\/20,
-.bg-amber-50,
-.bg-amber-50\/20,
-.bg-amber-50\/30 {
-  background-color: rgba(242, 184, 181, 0.1) !important;
-}
-
-/* Custom styling for UI cards & components to have smooth elegant border-radius and Material 3 shadows */
-.rounded-2xl {
-  border-radius: 16px !important;
-}
-.rounded-3xl, .rounded-xl {
-  border-radius: 20px !important;
-}
-
-/* Material 3 Styled Shadows and Custom Scrollbar Rules */
+/* Custom Scrollbar Rules with Colourful Glows */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(18, 14, 46, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.2);
-  border-radius: 4px;
+  background: linear-gradient(180deg, #6366f1, #ec4899);
+  border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.4);
+  background: linear-gradient(180deg, #4f46e5, #db2777);
+}
+
+/* Glow effects and colorful animations */
+.glow-indigo {
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+}
+.glow-pink {
+  box-shadow: 0 0 25px rgba(236, 72, 153, 0.35);
+}
+.glow-emerald {
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.35);
+}
+.glow-rose {
+  box-shadow: 0 0 25px rgba(244, 63, 94, 0.35);
+}
+.glow-amber {
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.35);
+}
+
+/* Custom card glassmorphism styles */
+.glass-panel {
+  background: rgba(15, 11, 38, 0.7);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.glass-panel-light {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+/* Card gradients */
+.gradient-card-indigo {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.18), rgba(168, 85, 247, 0.06));
+  border: 1px solid rgba(99, 102, 241, 0.25);
+}
+.gradient-card-emerald {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(20, 184, 166, 0.06));
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.gradient-card-rose {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(236, 72, 153, 0.06));
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+.gradient-card-amber {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(234, 179, 8, 0.06));
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+/* Smooth active highlight gradients */
+.gradient-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #ec4899 100%);
+}
+.gradient-primary-hover:hover {
+  background: linear-gradient(135deg, #4338ca 0%, #db2777 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
 }

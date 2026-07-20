@@ -23,7 +23,8 @@ import {
   ExternalLink,
   ShieldAlert,
   Save,
-  Check
+  Check,
+  Copy
 } from 'lucide-react';
 import { ShopRegistration } from '../types';
 
@@ -57,6 +58,8 @@ export default function AdminApprovalView({ registrations, onUpdateStatus, isMr 
   });
   const [notesText, setNotesText] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState('');
+  const [showApprovalSuccess, setShowApprovalSuccess] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
 
   // Handle setting corresponding end date based on type
   const handleSubTypeChange = (type: 'Lifetime' | '1 Month' | '3 Months' | '6 Months' | '1 Year' | 'Custom') => {
@@ -98,6 +101,19 @@ export default function AdminApprovalView({ registrations, onUpdateStatus, isMr 
         ? (isMr ? 'नोंदणी अर्ज नाकारला गेला.' : 'Registration rejected.')
         : (isMr ? 'अधिक माहितीसाठी विनंती पाठविली.' : 'Information request sent.')
     );
+
+    if (status === 'Active') {
+      // Show celebration modal with login details
+      setShowApprovalSuccess({
+        ...selectedReg,
+        subscription: {
+          ...selectedReg.subscription,
+          subscriptionType: subType,
+          startDate: startDate,
+          endDate: subType === 'Lifetime' ? undefined : endDate
+        }
+      });
+    }
 
     setTimeout(() => {
       setActionSuccessMsg('');
@@ -515,6 +531,100 @@ export default function AdminApprovalView({ registrations, onUpdateStatus, isMr 
         </div>
 
       </div>
+
+      {/* GORGEOUS COLOURFUL APPROVAL SUCCESS MODAL */}
+      {showApprovalSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="relative w-full max-w-lg overflow-hidden border border-indigo-500/30 rounded-3xl p-6 md:p-8 bg-gradient-to-b from-[#110d29] to-[#080514] text-slate-100 shadow-2xl glow-indigo animate-in fade-in zoom-in-95 duration-200">
+            {/* Colorful background glow items */}
+            <div className="absolute -top-16 -left-16 w-32 h-32 bg-pink-500/20 rounded-full blur-2xl"></div>
+            <div className="absolute -bottom-16 -right-16 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+
+            {/* Sparkles celebration animation elements */}
+            <div className="flex flex-col items-center text-center space-y-4">
+              <div className="p-4 bg-gradient-to-tr from-indigo-500 to-pink-500 rounded-full text-white shadow-lg shadow-indigo-500/30">
+                <Sparkles size={32} className="animate-pulse" />
+              </div>
+
+              <div className="space-y-1.5">
+                <h3 className="text-xl md:text-2xl font-black font-display tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-pink-400 to-amber-300">
+                  {isMr ? '🎉 दुकान यशस्वीरित्या मंजूर!' : '🎉 Shop Successfully Approved!'}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  {isMr ? 'सॉफ्टवेअर परवाना आणि लॉगिन तपशील तयार करण्यात आले आहेत.' : 'Software license and login credentials are now active.'}
+                </p>
+              </div>
+
+              {/* Shop info card */}
+              <div className="w-full bg-[#151035]/50 border border-indigo-500/10 rounded-2xl p-4 text-left space-y-3">
+                <div className="flex justify-between border-b border-indigo-500/10 pb-2 text-xs">
+                  <span className="text-slate-400">{isMr ? 'दुकान नाव:' : 'Shop Name:'}</span>
+                  <strong className="text-white text-right">{showApprovalSuccess.shopName}</strong>
+                </div>
+                <div className="flex justify-between border-b border-indigo-500/10 pb-2 text-xs">
+                  <span className="text-slate-400">{isMr ? 'मालक नाव:' : 'Owner Name:'}</span>
+                  <strong className="text-white text-right">{showApprovalSuccess.ownerName}</strong>
+                </div>
+                <div className="flex justify-between border-b border-indigo-500/10 pb-2 text-xs">
+                  <span className="text-slate-400">{isMr ? 'परवाना कालावधी:' : 'License Period:'}</span>
+                  <strong className="text-indigo-400 text-right">{showApprovalSuccess.subscription?.subscriptionType || '1 Year'}</strong>
+                </div>
+
+                {/* Login details section */}
+                <div className="p-3 bg-slate-950/70 border border-indigo-500/20 rounded-xl space-y-2 mt-2">
+                  <p className="text-[10px] text-pink-400 font-bold uppercase tracking-widest font-mono">
+                    🔑 {isMr ? 'दुकानदार लॉगिन माहिती' : 'OWNER LOGIN CREDENTIALS'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-500">{isMr ? 'युझरनेम:' : 'Username:'}</span>
+                      <p className="text-slate-200 font-bold break-all bg-indigo-950/20 px-1.5 py-0.5 rounded border border-indigo-500/10">{showApprovalSuccess.loginInfo?.username}</p>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] text-slate-500">{isMr ? 'पासवर्ड:' : 'Password:'}</span>
+                      <p className="text-slate-200 font-bold break-all bg-indigo-950/20 px-1.5 py-0.5 rounded border border-indigo-500/10">{showApprovalSuccess.loginInfo?.password}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action buttons */}
+              <div className="w-full flex flex-col sm:flex-row gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const msg = isMr 
+                      ? `*अभिनंदन! तुमचे दुकान मंजूर झाले आहे!* 🎉\n\n🏪 *दुकान*: ${showApprovalSuccess.shopName}\n🔑 *युझरनेम*: ${showApprovalSuccess.loginInfo?.username}\n🔒 *पासवर्ड*: ${showApprovalSuccess.loginInfo?.password}\n📅 *परवाना*: ${showApprovalSuccess.subscription?.subscriptionType || '1 Year'}\n\nबिले आणि स्टॉक व्यवस्थापित करण्यासाठी आत्ताच लॉगिन करा!`
+                      : `*Congratulations! Your Shop is Approved!* 🎉\n\n🏪 *Shop Name*: ${showApprovalSuccess.shopName}\n🔑 *Username*: ${showApprovalSuccess.loginInfo?.username}\n🔒 *Password*: ${showApprovalSuccess.loginInfo?.password}\n📅 *License*: ${showApprovalSuccess.subscription?.subscriptionType || '1 Year'}\n\nStart logging in to manage your bills and stock!`;
+                    navigator.clipboard.writeText(msg);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className={`flex-1 py-2.5 rounded-xl font-bold text-xs transition flex items-center justify-center gap-1.5 shadow-md ${
+                    copied 
+                      ? 'bg-emerald-600 text-white shadow-emerald-600/20' 
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-indigo-600/20'
+                  }`}
+                >
+                  {copied ? <Check size={14} /> : <Copy size={14} />}
+                  {copied 
+                    ? (isMr ? 'कॉपी केले! 👍' : 'Copied Success! 👍') 
+                    : (isMr ? 'व्हॉट्सॲप मेसेज कॉपी करा' : 'Copy Message for WhatsApp')}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowApprovalSuccess(null)}
+                  className="py-2.5 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold text-xs transition"
+                >
+                  {isMr ? 'बंद करा' : 'Close'}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
