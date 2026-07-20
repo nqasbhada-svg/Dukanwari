@@ -86,6 +86,20 @@ import QrCodeGeneratorView from './components/QrCodeGeneratorView';
 import { ShopRegistration } from './types';
 import { hashPassword, comparePassword } from './utils/crypto';
 
+// Helper to safely load and parse local storage data without throwing runtime syntax errors
+function safeLoadFromLocalStorage<T>(key: string, defaultValue: T): T {
+  try {
+    const stored = localStorage.getItem(key);
+    if (!stored) return defaultValue;
+    if (stored === 'undefined' || stored === 'null' || stored.trim() === '') {
+      return defaultValue;
+    }
+    return JSON.parse(stored) as T;
+  } catch (error) {
+    console.error(`Failed to safely parse localStorage key "${key}":`, error);
+    return defaultValue;
+  }
+}
 
 export default function App() {
   // Localization & Theme Configuration
@@ -108,8 +122,7 @@ export default function App() {
 
   // Shop Registrations & Admin Approval States
   const [registrations, setRegistrations] = useState<ShopRegistration[]>(() => {
-    const stored = localStorage.getItem('vastraa_registrations');
-    return stored ? JSON.parse(stored) : initialRegistrations;
+    return safeLoadFromLocalStorage<ShopRegistration[]>('vastraa_registrations', initialRegistrations);
   });
   const [isRegistering, setIsRegistering] = useState<boolean>(false);
   const [loginMode, setLoginMode] = useState<'otp' | 'business'>('otp');
@@ -119,36 +132,28 @@ export default function App() {
 
   // Primary Business Collections (Reactive States simulating Cloud DB updates)
   const [products, setProducts] = useState<Product[]>(() => {
-    const stored = localStorage.getItem('vastraa_products');
-    return stored ? JSON.parse(stored) : initialProducts;
+    return safeLoadFromLocalStorage<Product[]>('vastraa_products', initialProducts);
   });
   const [customers, setCustomers] = useState<Customer[]>(() => {
-    const stored = localStorage.getItem('vastraa_customers');
-    return stored ? JSON.parse(stored) : initialCustomers;
+    return safeLoadFromLocalStorage<Customer[]>('vastraa_customers', initialCustomers);
   });
   const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
-    const stored = localStorage.getItem('vastraa_suppliers');
-    return stored ? JSON.parse(stored) : initialSuppliers;
+    return safeLoadFromLocalStorage<Supplier[]>('vastraa_suppliers', initialSuppliers);
   });
   const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    const stored = localStorage.getItem('vastraa_invoices');
-    return stored ? JSON.parse(stored) : initialInvoices;
+    return safeLoadFromLocalStorage<Invoice[]>('vastraa_invoices', initialInvoices);
   });
   const [purchaseHistory, setPurchaseHistory] = useState<PurchaseBill[]>(() => {
-    const stored = localStorage.getItem('vastraa_purchaseHistory');
-    return stored ? JSON.parse(stored) : [];
+    return safeLoadFromLocalStorage<PurchaseBill[]>('vastraa_purchaseHistory', []);
   });
   const [expenses, setExpenses] = useState<Expense[]>(() => {
-    const stored = localStorage.getItem('vastraa_expenses');
-    return stored ? JSON.parse(stored) : initialExpenses;
+    return safeLoadFromLocalStorage<Expense[]>('vastraa_expenses', initialExpenses);
   });
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
-    const stored = localStorage.getItem('vastraa_auditLogs');
-    return stored ? JSON.parse(stored) : initialAuditLogs;
+    return safeLoadFromLocalStorage<AuditLog[]>('vastraa_auditLogs', initialAuditLogs);
   });
   const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
-    const stored = localStorage.getItem('vastraa_shopSettings');
-    return stored ? JSON.parse(stored) : defaultSettings;
+    return safeLoadFromLocalStorage<ShopSettings>('vastraa_shopSettings', defaultSettings);
   });
 
   // Public Invoice & Outstanding Billing Router
@@ -186,12 +191,10 @@ export default function App() {
   }, []);
 
   const [categories, setCategories] = useState<Category[]>(() => {
-    const stored = localStorage.getItem('vastraa_categories');
-    return stored ? JSON.parse(stored) : initialCategories;
+    return safeLoadFromLocalStorage<Category[]>('vastraa_categories', initialCategories);
   });
   const [brands, setBrands] = useState<Brand[]>(() => {
-    const stored = localStorage.getItem('vastraa_brands');
-    return stored ? JSON.parse(stored) : initialBrands;
+    return safeLoadFromLocalStorage<Brand[]>('vastraa_brands', initialBrands);
   });
 
   // ==========================================
