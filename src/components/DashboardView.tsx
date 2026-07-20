@@ -264,9 +264,11 @@ export default function DashboardView({ products, invoices, t, isMr, onNavigate 
           </div>
         </div>
 
-        {/* Top Selling Products (Right Column) */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
-          <div className="space-y-4">
+        {/* Right Stack */}
+        <div className="flex flex-col gap-6">
+          {/* Top Selling Products */}
+          <div className="bg-white p-5 rounded-2xl border border-slate-200 flex flex-col justify-between">
+            <div className="space-y-4">
             <div>
               <h2 className="text-base font-bold text-slate-900">{t.topSelling}</h2>
               <p className="text-xs text-slate-500">{isMr ? 'सर्वात जास्त विकल्या गेलेले आयटम' : 'Items moving fast in the store'}</p>
@@ -302,6 +304,48 @@ export default function DashboardView({ products, invoices, t, isMr, onNavigate 
             {isMr ? 'सर्व विक्री अहवाल पहा' : 'View Deep Sales Reports'}
             <ArrowRight size={12} />
           </button>
+          </div>
+
+          {/* Low Stock Alerts */}
+          <div className="bg-white p-5 rounded-2xl border border-rose-200 flex flex-col shadow-sm shadow-rose-100/50">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="text-rose-500" size={20} />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">{isMr ? 'कमी स्टॉक अलर्ट' : 'Low Stock Alerts'}</h2>
+                  <p className="text-xs text-slate-500">{isMr ? 'लवकरच संपणारे आयटम' : 'Products needing restock'}</p>
+                </div>
+              </div>
+              <div className="space-y-3 max-h-[160px] overflow-y-auto pr-1">
+                {lowStockItems.length > 0 ? lowStockItems.map((p, idx) => (
+                  <div key={idx} className="flex justify-between items-center p-3 rounded-xl bg-rose-50 border border-rose-100">
+                    <div className="space-y-0.5">
+                      <span className="font-semibold text-xs text-slate-800 line-clamp-1">{isMr ? p.itemNameMr : p.itemName}</span>
+                      <span className="text-[10px] text-slate-500 block font-mono">Size: {p.size} • Color: {p.color}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-extrabold text-xs text-rose-600 block">{p.currentStock} left</span>
+                      <span className="text-[10px] text-slate-500 font-mono">Min: {p.minStock}</span>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100 text-center">
+                    <CheckCircle className="mx-auto text-emerald-500 mb-2" size={20} />
+                    <p className="text-xs font-bold text-emerald-700">{isMr ? 'सर्व स्टॉक व्यवस्थित आहे' : 'All stock levels healthy'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <button 
+              id="nav-products-btn"
+              onClick={() => onNavigate('products')}
+              className="w-full mt-4 flex items-center justify-center gap-2 border border-rose-200 hover:bg-rose-50 transition py-2.5 rounded-xl text-xs font-semibold text-rose-600"
+            >
+              <Package size={14} />
+              {isMr ? 'इन्व्हेंटरी व्यवस्थापित करा' : 'Manage Inventory'}
+              <ArrowRight size={12} />
+            </button>
+          </div>
         </div>
       </div>
 

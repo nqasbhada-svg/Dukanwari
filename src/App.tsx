@@ -33,7 +33,8 @@ import {
   AlertCircle,
   Printer,
   Download,
-  ArrowLeft
+  ArrowLeft,
+  QrCode
 } from 'lucide-react';
 import { auth, googleAuthProvider, signInWithPopup } from './utils/firebase.ts';
 
@@ -81,6 +82,7 @@ import CodeCenterView from './components/CodeCenterView';
 import ShopRegistrationForm from './components/ShopRegistrationForm';
 import AdminApprovalView from './components/AdminApprovalView';
 import ShopOwnerStatusDashboard from './components/ShopOwnerStatusDashboard';
+import QrCodeGeneratorView from './components/QrCodeGeneratorView';
 import { ShopRegistration } from './types';
 import { hashPassword, comparePassword } from './utils/crypto';
 
@@ -1418,6 +1420,7 @@ export default function App() {
         { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
         { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
         { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
+        { id: 'qr_generator', label: isMr ? 'क्यूआर कोड जनरेटर' : 'QR Code Generator', icon: QrCode },
         { id: 'admin', label: t.adminPanel, icon: Settings, ownerOnly: true },
         { id: 'code_center', label: t.devCenter, icon: Code },
       ];
@@ -2125,6 +2128,15 @@ export default function App() {
                   {currentView === 'code_center' && (
                     <CodeCenterView 
                       isMr={isMr}
+                    />
+                  )}
+
+                  {currentView === 'qr_generator' && (
+                    <QrCodeGeneratorView 
+                      products={products}
+                      t={t}
+                      isMr={isMr}
+                      shopSettings={shopSettings}
                     />
                   )}
                 </motion.div>
