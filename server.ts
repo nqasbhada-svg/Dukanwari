@@ -21,6 +21,7 @@ import {
   upsertSupplier,
   getAllInvoices,
   createInvoice,
+  upsertInvoice,
   getAllPurchaseBills,
   createPurchaseBill,
   getAllAuditLogs,
@@ -248,6 +249,61 @@ async function startServer() {
     try {
       const saved = await upsertShopSettings(req.body);
       res.json(saved);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // --- Bulk Sync All Endpoint ---
+  app.post('/api/sync-all', async (req, res) => {
+    try {
+      const { products: productsList, customers: customersList, invoices: invoicesList } = req.body;
+      
+      const syncStatus = {
+        productsSynced: 0,
+        customersSynced: 0,
+        invoicesSynced: 0,
+        errors: [] as string[]
+      };
+
+      if (Array.isArray(productsList)) {
+        for (const item of productsList) {
+          try {
+            await upsertProduct(item);
+            syncStatus.productsSynced++;
+          } catch (e: any) {
+            syncStatus.errors.push(`Product [${item.itemName || item.id}]: ${e.message}`);
+          }
+        }
+      }
+
+      if (Array.isArray(customersList)) {
+        for (const item of customersList) {
+          try {
+            await upsertCustomer(item);
+            syncStatus.customersSynced++;
+          } catch (e: any) {
+            syncStatus.errors.push(`Customer [${item.name || item.id}]: ${e.message}`);
+          }
+        }
+      }
+
+      if (Array.isArray(invoicesList)) {
+        for (const item of invoicesList) {
+          try {
+            await upsertInvoice(item);
+            syncStatus.invoicesSynced++;
+          } catch (e: any) {
+            syncStatus.errors.push(`Invoice [${item.invoiceNumber || item.id}]: ${e.message}`);
+          }
+        }
+      }
+
+      const success = syncStatus.errors.length === 0;
+      res.json({
+        success,
+        ...syncStatus
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

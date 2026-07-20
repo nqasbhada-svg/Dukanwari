@@ -37,6 +37,17 @@ interface AdminPanelProps {
   isMr: boolean;
   onUpdateSettings: (settings: ShopSettings) => void;
   onToggleUserRole: (role: 'owner' | 'employee') => void;
+  syncStatusState?: {
+    status: 'idle' | 'syncing' | 'success' | 'error';
+    message: string;
+    details?: {
+      productsSynced: number;
+      customersSynced: number;
+      invoicesSynced: number;
+      errors: string[];
+    };
+  };
+  onSyncAll?: () => void;
 }
 
 export default function AdminPanel({
@@ -45,7 +56,9 @@ export default function AdminPanel({
   userSession,
   isMr,
   onUpdateSettings,
-  onToggleUserRole
+  onToggleUserRole,
+  syncStatusState = { status: 'idle', message: '' },
+  onSyncAll = () => {}
 }: AdminPanelProps) {
   // Tabs: 'shop_profile', 'roles_permissions', 'backup_sync', 'audit_logs'
   const [activeAdminTab, setActiveAdminTab] = useState<'profile' | 'whatsapp' | 'roles' | 'backup' | 'audit'>('profile');
@@ -824,6 +837,129 @@ export default function AdminPanel({
               >
                 <Database size={13} /> Trigger Cloud Backup
               </button>
+            </div>
+
+            {/* Force Sync All Local State Panel */}
+            <div className="bg-gradient-to-r from-indigo-50/50 to-slate-50 border border-indigo-100 rounded-xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1 bg-indigo-100 text-indigo-700 rounded">
+                      <RefreshCw size={14} className={syncStatusState.status === 'syncing' ? 'animate-spin' : ''} />
+                    </span>
+                    <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider font-mono">
+                      {isMr ? 'तात्काळ सर्व डेटा सिंक करा (Sync All)' : 'Force Batch Sync All Local State'}
+                    </h4>
+                  </div>
+                  <p className="text-slate-500 text-xs">
+                    {isMr 
+                      ? 'तुमचा स्थानिक डेटा (सर्व उत्पादने, ग्राहक आणि डिजिटल सेल्स बिले) थेट सर्व्हरवरील मुख्य डेटाबेसमध्ये त्वरित सिंक करा.' 
+                      : 'Force push and upsert all local products, CRM customers, and digital sales invoices into the Cloud SQL PostgreSQL database.'}
+                  </p>
+                </div>
+                <button
+                  id="sync-all-state-btn"
+                  onClick={onSyncAll}
+                  disabled={syncStatusState.status === 'syncing'}
+                  className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-lg transition text-xs shrink-0 ${
+                    syncStatusState.status === 'syncing'
+                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-xs'
+                  }`}
+                >
+                  <RefreshCw size={13} className={syncStatusState.status === 'syncing' ? 'animate-spin' : ''} />
+                  {syncStatusState.status === 'syncing' 
+                    ? (isMr ? 'सिंक होत आहे...' : 'Syncing All...') 
+                    : (isMr ? 'सर्व डेटा सिंक करा' : 'Sync All')}
+                </button>
+              </div>
+
+              {/* Status Indicator Panel */}
+              <div className="border-t border-indigo-50 pt-3">
+                <div className="flex items-center gap-2 mb-2 font-mono text-[10px] text-slate-500 uppercase font-bold">
+                  <span>{isMr ? 'सिंक स्थिती:' : 'Sync Status Feedback:'}</span>
+                  {syncStatusState.status === 'syncing' && (
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded text-[9px] animate-pulse">
+                      {isMr ? 'सिंक्रोनाइझिंग सक्रिय' : 'Syncing Active'}
+                    </span>
+                  )}
+                  {syncStatusState.status === 'success' && (
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[9px]">
+                      {isMr ? 'यशस्वी' : 'Success'}
+                    </span>
+                  )}
+                  {syncStatusState.status === 'error' && (
+                    <span className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded text-[9px]">
+                      {isMr ? 'त्रुटी आढळली' : 'Sync Error'}
+                    </span>
+                  )}
+                  {syncStatusState.status === 'idle' && (
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-[9px]">
+                      {isMr ? 'सिंक करण्यासाठी तयार' : 'Ready'}
+                    </span>
+                  )}
+                </div>
+
+                {syncStatusState.status === 'idle' && (
+                  <p className="text-slate-400 text-[11px] italic">
+                    {isMr 
+                      ? 'सिंक सुरू करण्यासाठी वर दिलेल्या "सर्व डेटा सिंक करा" बटणावर क्लिक करा.' 
+                      : 'Click the "Sync All" button above to initiate force reconciliation of local state and DB.'}
+                  </p>
+                )}
+
+                {syncStatusState.status === 'syncing' && (
+                  <div className="flex items-center gap-2 text-indigo-700 font-medium">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                    </span>
+                    <p className="text-[11px] leading-relaxed">{syncStatusState.message}</p>
+                  </div>
+                )}
+
+                {syncStatusState.status === 'success' && (
+                  <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-emerald-900 font-bold text-xs">
+                      <CheckCircle2 size={14} className="text-emerald-600" />
+                      <span>{syncStatusState.message}</span>
+                    </div>
+                    {syncStatusState.details && (
+                      <div className="grid grid-cols-3 gap-2 pt-1">
+                        <div className="bg-white p-2 border border-emerald-100 rounded-md text-center">
+                          <span className="block text-[10px] text-slate-400 font-bold uppercase font-mono">{isMr ? 'उत्पादने' : 'Products'}</span>
+                          <span className="text-sm font-extrabold text-slate-800">{syncStatusState.details.productsSynced}</span>
+                        </div>
+                        <div className="bg-white p-2 border border-emerald-100 rounded-md text-center">
+                          <span className="block text-[10px] text-slate-400 font-bold uppercase font-mono">{isMr ? 'ग्राहक' : 'Customers'}</span>
+                          <span className="text-sm font-extrabold text-slate-800">{syncStatusState.details.customersSynced}</span>
+                        </div>
+                        <div className="bg-white p-2 border border-emerald-100 rounded-md text-center">
+                          <span className="block text-[10px] text-slate-400 font-bold uppercase font-mono">{isMr ? 'विक्री बिले' : 'Invoices'}</span>
+                          <span className="text-sm font-extrabold text-slate-800">{syncStatusState.details.invoicesSynced}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {syncStatusState.status === 'error' && (
+                  <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center gap-1.5 text-rose-900 font-bold text-xs">
+                      <AlertCircle size={14} className="text-rose-600" />
+                      <span>{syncStatusState.message}</span>
+                    </div>
+                    {syncStatusState.details && (syncStatusState.details.errors.length > 0) && (
+                      <div className="text-[10px] bg-white p-2 border border-rose-100 rounded-md text-rose-700 max-h-24 overflow-y-auto font-mono whitespace-pre-wrap leading-relaxed">
+                        <span className="font-bold uppercase text-[9px] text-slate-400 block mb-1">Error Logs:</span>
+                        {syncStatusState.details.errors.map((err, idx) => (
+                          <div key={idx} className="border-b border-slate-50 last:border-0 pb-1 mb-1">{err}</div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Live Interactive Conflict Handling Utility Playground */}

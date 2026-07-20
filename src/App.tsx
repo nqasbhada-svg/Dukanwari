@@ -237,6 +237,81 @@ export default function App() {
     return () => clearTimeout(timer);
   };
 
+  const [syncStatusState, setSyncStatusState] = useState<{
+    status: 'idle' | 'syncing' | 'success' | 'error';
+    message: string;
+    details?: {
+      productsSynced: number;
+      customersSynced: number;
+      invoicesSynced: number;
+      errors: string[];
+    };
+  }>({
+    status: 'idle',
+    message: ''
+  });
+
+  const handleSyncAll = async () => {
+    setSyncStatusState({
+      status: 'syncing',
+      message: lang === 'mr' ? 'क्लाउडवर सर्व स्थानिक डेटा पुश करत आहे...' : 'Forcing batch push of local state to backend API...'
+    });
+    setSupabaseSyncing(true);
+
+    try {
+      const response = await fetch('/api/sync-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          products,
+          customers,
+          invoices
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(lang === 'mr' ? 'सर्व्हर एरर: सिंक्रोनाइझेशन अयशस्वी!' : 'Server error: Synchronization failed!');
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        setSyncStatusState({
+          status: 'success',
+          message: lang === 'mr' ? 'सर्व स्थानिक डेटा यशस्वीरित्या सिंक केला गेला!' : 'All local datasets successfully synchronized with the Cloud DB!',
+          details: {
+            productsSynced: result.productsSynced,
+            customersSynced: result.customersSynced,
+            invoicesSynced: result.invoicesSynced,
+            errors: result.errors
+          }
+        });
+        setLastSyncTime(new Date());
+        setSupabaseOnline(true);
+      } else {
+        setSyncStatusState({
+          status: 'error',
+          message: lang === 'mr' ? 'काही रेकॉर्ड सिंक करताना त्रुटी आल्या!' : 'Sync completed, but some records failed to reconcile.',
+          details: {
+            productsSynced: result.productsSynced,
+            customersSynced: result.customersSynced,
+            invoicesSynced: result.invoicesSynced,
+            errors: result.errors
+          }
+        });
+      }
+    } catch (err: any) {
+      console.error('Batch sync failure:', err);
+      setSyncStatusState({
+        status: 'error',
+        message: err.message || (lang === 'mr' ? 'सिंक्रोनाइझेशन अयशस्वी: नेटवर्क जोडणी तपासा!' : 'Synchronization failed. Please check backend connection.')
+      });
+    } finally {
+      setSupabaseSyncing(false);
+    }
+  };
+
   // Sync background updates when local datasets edit
   useEffect(() => {
     if (products.length > 0) {
@@ -2028,8 +2103,6 @@ export default function App() {
                       t={t}
                       isMr={isMr}
                       onNavigate={(view) => setCurrentView(view)}
-                      shopSettings={shopSettings}
-                      session={session}
                     />
                   )}
 
@@ -2116,6 +2189,8 @@ export default function App() {
                       isMr={isMr}
                       onUpdateSettings={(newSettings) => setShopSettings(newSettings)}
                       onToggleUserRole={(role) => setSession({ ...session, role })}
+                      syncStatusState={syncStatusState}
+                      onSyncAll={handleSyncAll}
                     />
                   )}
 

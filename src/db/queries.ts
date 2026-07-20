@@ -313,6 +313,41 @@ export async function createInvoice(data: any) {
   }
 }
 
+export async function upsertInvoice(data: any) {
+  try {
+    const values = {
+      id: data.id,
+      invoiceNumber: data.invoiceNumber,
+      date: data.date,
+      customerId: data.customerId,
+      customerName: data.customerName,
+      customerMobile: data.customerMobile,
+      type: data.type || 'Non-GST',
+      items: data.items,
+      subtotal: Number(data.subtotal) || 0,
+      discount: Number(data.discount) || 0,
+      taxAmount: Number(data.taxAmount) || 0,
+      grandTotal: Number(data.grandTotal) || 0,
+      paymentMode: data.paymentMode || 'Cash',
+      splitDetails: data.splitDetails || null,
+      whatsappSent: !!data.whatsappSent,
+      status: data.status || 'Paid',
+      amountPaid: Number(data.amountPaid) || 0,
+    };
+
+    const result = await db.insert(invoices)
+      .values(values)
+      .onConflictDoUpdate({
+        target: invoices.id,
+        set: values
+      })
+      .returning();
+    return result[0];
+  } catch (error) {
+    handleDbError('upsertInvoice', error);
+  }
+}
+
 // ---------------- PURCHASE BILLS QUERIES ----------------
 export async function getAllPurchaseBills() {
   try {

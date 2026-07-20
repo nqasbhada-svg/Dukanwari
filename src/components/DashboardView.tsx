@@ -14,15 +14,7 @@ import {
   TrendingDown, 
   Layers,
   ArrowRight,
-  FileSpreadsheet,
-  Store,
-  User,
-  MapPin,
-  Calendar,
-  Clock,
-  Shield,
-  Sparkles,
-  Phone
+  FileSpreadsheet
 } from 'lucide-react';
 import { 
   ResponsiveContainer, 
@@ -34,7 +26,7 @@ import {
   Tooltip, 
   Legend 
 } from 'recharts';
-import { Product, Invoice, AppTranslations, ShopSettings, UserSession } from '../types';
+import { Product, Invoice, AppTranslations } from '../types';
 
 interface DashboardProps {
   products: Product[];
@@ -42,11 +34,9 @@ interface DashboardProps {
   t: AppTranslations;
   isMr: boolean;
   onNavigate: (view: string) => void;
-  shopSettings?: ShopSettings;
-  session?: UserSession | null;
 }
 
-export default function DashboardView({ products, invoices, t, isMr, onNavigate, shopSettings, session }: DashboardProps) {
+export default function DashboardView({ products, invoices, t, isMr, onNavigate }: DashboardProps) {
   // Calculators
   const todayStr = '2026-07-18'; // Simulated date context
   
@@ -94,111 +84,25 @@ export default function DashboardView({ products, invoices, t, isMr, onNavigate,
   return (
     <div className="space-y-6">
       {/* Top Welcome Title Banner */}
-      <div className="relative bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-950 p-6 md:p-8 rounded-3xl border border-slate-800 text-white shadow-xl overflow-hidden">
-        {/* Glow Effects */}
-        <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-          
-          {/* Section A: Shop Identity and Welcoming Info */}
-          <div className="flex items-start gap-4 flex-1">
-            <div className="hidden sm:flex bg-indigo-500/10 text-indigo-400 p-4.5 rounded-2xl ring-4 ring-indigo-500/5 items-center justify-center shrink-0 border border-indigo-500/25">
-              <Store size={28} className="animate-pulse" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-mono tracking-widest text-indigo-400 font-extrabold uppercase bg-indigo-500/15 px-2.5 py-1 rounded-full border border-indigo-500/30 flex items-center gap-1.5">
-                  <Sparkles size={11} className="text-amber-300" />
-                  {isMr ? 'वस्त्रा ईआरपी लाइव्ह' : 'VASTRAA ERP LIVE'}
-                </span>
-                
-                {/* GST Number verification pill */}
-                {(shopSettings?.gstNumber || '27AAAAA1234A1Z0') && (
-                  <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/25 flex items-center gap-1">
-                    <Shield size={10} className="fill-emerald-400/20" />
-                    {isMr ? 'जीएसटी नोंदणीकृत' : 'GSTIN'}: {shopSettings?.gstNumber || '27AAAAA1234A1Z0'}
-                  </span>
-                )}
-              </div>
-
-              {/* Dynamic Shop Name */}
-              <h1 className="text-2xl md:text-3xl font-sans font-black tracking-tight leading-none text-white">
-                {isMr 
-                  ? (shopSettings?.shopNameMr || 'वस्त्रा क्लोद एम्पोरियम') 
-                  : (shopSettings?.shopName || 'Vastraa Cloth Emporium')}
-              </h1>
-
-              {/* Dynamic Shop Address */}
-              <p className="text-slate-300 text-xs flex items-center gap-1.5 max-w-2xl leading-relaxed">
-                <MapPin size={13} className="text-indigo-400 shrink-0" />
-                <span>
-                  {isMr 
-                    ? (shopSettings?.addressMr || 'दुकान क्र. १२, स्वारगेट कमर्शियल प्लाझा, पुणे, महाराष्ट्र - ४११००२') 
-                    : (shopSettings?.address || 'Shop No. 12, Swargate Commercial Plaza, Pune, MH - 411002')}
-                </span>
-              </p>
-            </div>
-          </div>
-
-          {/* Section B: Owner Operator Card Profile */}
-          <div className="flex flex-wrap items-center gap-4 xl:justify-end shrink-0 w-full xl:w-auto">
-            
-            {/* Operator Box */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-3 w-full sm:w-auto">
-              <div className="w-10 h-10 bg-gradient-to-tr from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center font-bold text-white text-sm shrink-0">
-                <User size={18} />
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-mono tracking-wider block uppercase">
-                  {isMr ? 'सक्रिय ऑपरेटर' : 'Active Operator'}
-                </span>
-                <span className="text-xs font-bold text-white block">
-                  {session?.name || (isMr ? 'राहुल देशमुख' : 'Rahul Deshmukh')}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                  <span className="text-[9px] font-extrabold text-emerald-400 font-mono uppercase bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                    {session?.role === 'owner' ? (isMr ? 'मालक' : 'Owner') : (isMr ? 'कर्मचारी' : 'Employee')}
-                  </span>
-                  {(session?.mobile || shopSettings?.mobile) && (
-                    <span className="text-[9px] text-slate-400 font-mono flex items-center gap-0.5 ml-1">
-                      <Phone size={8} /> {session?.mobile || shopSettings?.mobile}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Live Terminal Clock / Date Card */}
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-4 flex items-center gap-3 w-full sm:w-auto">
-              <div className="w-10 h-10 bg-indigo-500/10 text-indigo-400 rounded-xl flex items-center justify-center shrink-0 border border-indigo-500/20">
-                <Calendar size={18} />
-              </div>
-              <div className="space-y-0.5">
-                <span className="text-[10px] text-slate-400 font-mono tracking-wider block uppercase">
-                  {isMr ? 'आजचा दिनांक' : 'Live Date'}
-                </span>
-                <span className="text-xs font-bold text-indigo-100 block">
-                  {isMr ? 'सोमवार, २० जुलै २०२६' : 'Monday, July 20, 2026'}
-                </span>
-                <span className="text-[9px] text-slate-400 font-mono flex items-center gap-1">
-                  <Clock size={9} /> 10:45 AM • {isMr ? 'सुरक्षित क्लाउड' : 'Cloud Synced'}
-                </span>
-              </div>
-            </div>
-
-            {/* Quick Invoice Trigger */}
-            <button
-              id="nav-billing-btn"
-              onClick={() => onNavigate('billing')}
-              className="w-full sm:w-auto px-5 py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/20 border border-indigo-400/20 transition transform hover:scale-[1.02]"
-            >
-              <IndianRupee size={15} />
-              {t.newInvoice}
-            </button>
-          </div>
-
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center bg-radial from-slate-900 to-slate-950 p-6 rounded-2xl border border-slate-800 text-white gap-4">
+        <div>
+          <span className="text-xs font-mono tracking-widest text-indigo-400 font-semibold uppercase">Cloud Connected - Supabase Live</span>
+          <h1 className="text-2xl font-sans font-bold tracking-tight mt-1">
+            {isMr ? 'रामकृष्ण हरी! कपडे दुकान व्यवस्थापन' : 'Vastraa Store Control Center'}
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">
+            {isMr ? 'आजचा दिनांक: १८ जुलै २०२६ | युजर: राहुल (मालक)' : 'Live Store Terminal: Sat, July 18, 2026 | Operator: Rahul (Owner)'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            id="nav-billing-btn"
+            onClick={() => onNavigate('billing')}
+            className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 transition px-4 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-indigo-600/20"
+          >
+            <IndianRupee size={16} />
+            {t.newInvoice}
+          </button>
         </div>
       </div>
 
