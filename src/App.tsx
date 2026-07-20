@@ -115,11 +115,19 @@ export default function App() {
   const t = isMr ? marathiTranslations : englishTranslations;
 
   // Active View Tab Router
-  const [currentView, setCurrentView] = useState<string>('dashboard');
+  const [currentView, setCurrentView] = useState<string>(() => {
+    const savedSession = safeLoadFromLocalStorage<UserSession | null>('vastraa_user_session', null);
+    if (savedSession?.role === 'system_admin') {
+      return 'approvals';
+    }
+    return 'dashboard';
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
 
   // Authentication State
-  const [session, setSession] = useState<UserSession | null>(null);
+  const [session, setSession] = useState<UserSession | null>(() => {
+    return safeLoadFromLocalStorage<UserSession | null>('vastraa_user_session', null);
+  });
   const [isSigningIn, setIsSigningIn] = useState<boolean>(false);
   const [loginMobile, setLoginMobile] = useState('');
   const [loginOtp, setLoginOtp] = useState('');
@@ -366,6 +374,14 @@ export default function App() {
   }, []);
 
   // Keep localStorage in sync with changes in state
+  useEffect(() => {
+    if (session) {
+      localStorage.setItem('vastraa_user_session', JSON.stringify(session));
+    } else {
+      localStorage.removeItem('vastraa_user_session');
+    }
+  }, [session]);
+
   useEffect(() => {
     localStorage.setItem('vastraa_products', JSON.stringify(products));
   }, [products]);
