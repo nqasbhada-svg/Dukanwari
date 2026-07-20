@@ -17,9 +17,18 @@ import {
   Key, 
   History, 
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  GitMerge,
+  CheckCircle2,
+  AlertCircle,
+  ArrowRight,
+  Clock,
+  Sliders,
+  User,
+  Globe
 } from 'lucide-react';
 import { ShopSettings, AuditLog, UserSession } from '../types';
+import { ConflictResolver, SyncRecord, CollisionConfig, CollisionResolutionResult, ResolutionStrategy } from '../utils/conflictResolver';
 
 interface AdminPanelProps {
   settings: ShopSettings;
@@ -126,6 +135,50 @@ export default function AdminPanel({
     dummyLink,
     shopName
   ]);
+
+  // ==========================================
+  // OFFLINE SYNC COLLISION PLAYGROUND STATES
+  // ==========================================
+  const [localProduct, setLocalProduct] = useState<SyncRecord>({
+    id: 'prod-101',
+    itemName: 'Designer Silk Saree (Offline Edit)',
+    itemNameMr: 'डिझायनर सिल्क साडी (ऑफलाईन)',
+    currentStock: 120,
+    sellingPrice: 1450,
+    version: 3,
+    updated_at: '2026-07-20T01:15:00.000Z'
+  });
+
+  const [masterProduct, setMasterProduct] = useState<SyncRecord>({
+    id: 'prod-101',
+    itemName: 'Designer Silk Saree (Master DB)',
+    itemNameMr: 'डिझायनर सिल्क साडी (क्लाउड)',
+    currentStock: 95,
+    sellingPrice: 1599,
+    version: 4,
+    updated_at: '2026-07-20T02:00:00.000Z'
+  });
+
+  const [syncStrategy, setSyncStrategy] = useState<ResolutionStrategy>('TIMESTAMP_COMPARISON');
+  const [enableFieldMerging, setEnableFieldMerging] = useState<boolean>(true);
+  const [clientPriorityField, setClientPriorityField] = useState<string>('');
+  const [masterPriorityField, setMasterPriorityField] = useState<string>('');
+  const [resolutionResult, setResolutionResult] = useState<CollisionResolutionResult<any> | null>(null);
+
+  const runResolution = () => {
+    const config: CollisionConfig = {
+      defaultStrategy: syncStrategy,
+      enableFieldLevelMerging: enableFieldMerging,
+      clientPriorityFields: clientPriorityField ? [clientPriorityField] : [],
+      masterPriorityFields: masterPriorityField ? [masterPriorityField] : []
+    };
+    const result = ConflictResolver.resolve(localProduct, masterProduct, config);
+    setResolutionResult(result);
+  };
+
+  useEffect(() => {
+    runResolution();
+  }, [localProduct, masterProduct, syncStrategy, enableFieldMerging, clientPriorityField, masterPriorityField]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -758,35 +811,432 @@ export default function AdminPanel({
 
         {/* TAB 3: Backup & Cloud Sync */}
         {activeAdminTab === 'backup' && (
-          <div className="space-y-5 text-xs">
-            <div>
-              <h3 className="font-bold text-slate-900 text-sm">Supabase Database Backups & Synchronization</h3>
-              <p className="text-slate-500 text-xs">Trigger secure cloud storage exports or trace automated Sync worker queue configurations.</p>
+          <div className="space-y-6 text-xs">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Supabase Database Backups & Synchronization</h3>
+                <p className="text-slate-500 text-xs">Trigger secure cloud storage exports or trace automated Sync worker queue configurations.</p>
+              </div>
+              <button
+                id="backup-supabase-btn"
+                onClick={handleBackupTrigger}
+                className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition shrink-0"
+              >
+                <Database size={13} /> Trigger Cloud Backup
+              </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Backups card */}
-              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
-                <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider font-mono">Export DB Snapshot</h4>
-                <p className="text-slate-400">Creates a secure JSON snapshot of local cached datasets and triggers upload to Supabase storage bucket.</p>
-                <button
-                  id="backup-supabase-btn"
-                  onClick={handleBackupTrigger}
-                  className="flex items-center gap-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-3 py-1.5 rounded-lg transition"
-                >
-                  <Database size={13} /> Trigger Cloud Backup
-                </button>
+            {/* Live Interactive Conflict Handling Utility Playground */}
+            <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-5 space-y-5">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                    <GitMerge size={16} />
+                  </span>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider font-mono">Master PostgreSQL Offline Sync & Collision Playground</h4>
+                    <p className="text-slate-400 text-[10px]">Test and simulate real-time conflicts using the newly created <strong>ConflictResolver</strong> utility class.</p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 text-[10px] uppercase font-mono tracking-wider font-bold bg-indigo-100 text-indigo-700 rounded-full">
+                  Supabase RLS Capable
+                </span>
               </div>
 
-              {/* Conflict resolution logic block */}
-              <div className="p-4 bg-amber-50 border border-amber-100 rounded-xl space-y-2.5 text-amber-950">
-                <span className="font-bold text-xs uppercase tracking-wider font-mono flex items-center gap-1">
-                  <AlertTriangle size={13} /> Offline Conflict Resolver
-                </span>
-                <p className="leading-relaxed">
-                  If cash-terminal loses connectivity, invoice queues accumulate locally. Upon sync reconnection, the app automatically runs the stored procedure <strong>sync_offline_invoice()</strong> on the PostgreSQL database, executing server-authoritative validations against double billing.
-                </p>
+              {/* Step 1: Simulated Inputs Side-by-Side */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Local Cache Dataset */}
+                <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-3xs">
+                  <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                    <Smartphone size={14} className="text-indigo-500" />
+                    <span className="font-bold text-slate-700 text-xs font-mono uppercase tracking-wide">Client Offline Cache</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Item Name (Local)</label>
+                      <input
+                        type="text"
+                        value={localProduct.itemName}
+                        onChange={(e) => setLocalProduct(prev => ({ ...prev, itemName: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Stock (Local)</label>
+                        <input
+                          type="number"
+                          value={localProduct.currentStock}
+                          onChange={(e) => setLocalProduct(prev => ({ ...prev, currentStock: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Selling Price (Local)</label>
+                        <input
+                          type="number"
+                          value={localProduct.sellingPrice}
+                          onChange={(e) => setLocalProduct(prev => ({ ...prev, sellingPrice: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Version (Local)</label>
+                        <input
+                          type="number"
+                          value={localProduct.version}
+                          onChange={(e) => setLocalProduct(prev => ({ ...prev, version: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Updated At (Local)</label>
+                        <input
+                          type="text"
+                          value={localProduct.updated_at}
+                          onChange={(e) => setLocalProduct(prev => ({ ...prev, updated_at: e.target.value }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-1.5">
+                      <button
+                        onClick={() => setLocalProduct(prev => ({ ...prev, updated_at: new Date().toISOString() }))}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md font-bold transition text-[10px]"
+                      >
+                        Set to Now
+                      </button>
+                      <button
+                        onClick={() => setLocalProduct(prev => ({ ...prev, version: (prev.version || 0) + 1 }))}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md font-bold transition text-[10px]"
+                      >
+                        Increment Version
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Master Database Dataset */}
+                <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-3xs">
+                  <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                    <Globe size={14} className="text-emerald-500" />
+                    <span className="font-bold text-slate-700 text-xs font-mono uppercase tracking-wide">Master Cloud DB (PostgreSQL)</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Item Name (Master)</label>
+                      <input
+                        type="text"
+                        value={masterProduct.itemName}
+                        onChange={(e) => setMasterProduct(prev => ({ ...prev, itemName: e.target.value }))}
+                        className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Stock (Master)</label>
+                        <input
+                          type="number"
+                          value={masterProduct.currentStock}
+                          onChange={(e) => setMasterProduct(prev => ({ ...prev, currentStock: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Selling Price (Master)</label>
+                        <input
+                          type="number"
+                          value={masterProduct.sellingPrice}
+                          onChange={(e) => setMasterProduct(prev => ({ ...prev, sellingPrice: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Version (Master)</label>
+                        <input
+                          type="number"
+                          value={masterProduct.version}
+                          onChange={(e) => setMasterProduct(prev => ({ ...prev, version: Number(e.target.value) }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Updated At (Master)</label>
+                        <input
+                          type="text"
+                          value={masterProduct.updated_at}
+                          onChange={(e) => setMasterProduct(prev => ({ ...prev, updated_at: e.target.value }))}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 font-mono text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-hidden"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-1.5">
+                      <button
+                        onClick={() => setMasterProduct(prev => ({ ...prev, updated_at: new Date().toISOString() }))}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md font-bold transition text-[10px]"
+                      >
+                        Set to Now
+                      </button>
+                      <button
+                        onClick={() => setMasterProduct(prev => ({ ...prev, version: (prev.version || 0) + 1 }))}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-md font-bold transition text-[10px]"
+                      >
+                        Increment Version
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* Step 2: Configuration settings */}
+              <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-3 shadow-3xs">
+                <div className="flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                  <Sliders size={14} className="text-amber-500" />
+                  <span className="font-bold text-slate-700 text-xs font-mono uppercase tracking-wide">Sync Conflict Rules Configuration</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Primary Strategy</label>
+                    <select
+                      value={syncStrategy}
+                      onChange={(e) => setSyncStrategy(e.target.value as ResolutionStrategy)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                    >
+                      <option value="TIMESTAMP_COMPARISON">Compare updated_at Timestamps</option>
+                      <option value="VERSION_COMPARISON">Compare Version Numbers</option>
+                      <option value="CLIENT_DOMINANT">Client Cache Dominates (Overwrite Server)</option>
+                      <option value="MASTER_DOMINANT">Server Master Dominates (Discard Client)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Client Override Priority Field</label>
+                    <select
+                      value={clientPriorityField}
+                      onChange={(e) => setClientPriorityField(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                    >
+                      <option value="">None (Standard resolution rule)</option>
+                      <option value="itemName">Item Name (Client force win)</option>
+                      <option value="currentStock">Stock (Client force win)</option>
+                      <option value="sellingPrice">Selling Price (Client force win)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-400 font-bold uppercase mb-1">Master Override Priority Field</label>
+                    <select
+                      value={masterPriorityField}
+                      onChange={(e) => setMasterPriorityField(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                    >
+                      <option value="">None (Standard resolution rule)</option>
+                      <option value="itemName">Item Name (Master force win)</option>
+                      <option value="currentStock">Stock (Master force win)</option>
+                      <option value="sellingPrice">Selling Price (Master force win)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1 border-t border-slate-50 mt-1">
+                  <input
+                    type="checkbox"
+                    id="enableFieldMerging"
+                    checked={enableFieldMerging}
+                    onChange={(e) => setEnableFieldMerging(e.target.checked)}
+                    className="w-3.5 h-3.5 text-indigo-600 border-slate-300 rounded-sm focus:ring-indigo-500"
+                  />
+                  <label htmlFor="enableFieldMerging" className="text-[11px] font-medium text-slate-600 select-none">
+                    Enable Field-Level Merging (resolves non-overlapping changes elegantly instead of total record rejection)
+                  </label>
+                </div>
+              </div>
+
+              {/* Step 3: Resolved Outcome Block */}
+              {resolutionResult && (
+                <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-3xs">
+                  <div className="p-3 bg-slate-50 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-slate-800 text-xs font-mono uppercase tracking-wider flex items-center gap-1.5">
+                      <CheckCircle2 size={14} className="text-emerald-500" />
+                      Resolution Engine Audit Report
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono text-slate-400">STATUS:</span>
+                      {resolutionResult.hasConflict ? (
+                        <span className="px-2 py-0.5 text-[9px] font-bold font-mono uppercase bg-amber-100 text-amber-800 rounded">
+                          Conflict Resolved
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 text-[9px] font-bold font-mono uppercase bg-emerald-100 text-emerald-800 rounded">
+                          Perfect Sync (Clean)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {/* Status box */}
+                    <div className="p-3 bg-indigo-50/50 border border-indigo-100/50 rounded-lg space-y-1">
+                      <div className="flex items-center gap-1.5 text-indigo-900 font-bold">
+                        <Sliders size={13} />
+                        <span>Resolution Strategy Applied: {resolutionResult.strategyUsed}</span>
+                      </div>
+                      <p className="text-slate-500 text-[10px] leading-relaxed">{resolutionResult.details}</p>
+                    </div>
+
+                    {/* Field Comparison Table */}
+                    <div className="space-y-1.5">
+                      <h5 className="font-bold text-slate-800 uppercase tracking-wide font-mono text-[10px]">Field-by-Field Reconciliation Map</h5>
+                      <div className="overflow-x-auto border border-slate-100 rounded-lg">
+                        <table className="w-full text-left border-collapse text-[10px]">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 font-mono uppercase text-[9px]">
+                              <th className="py-2 px-3">Field Key</th>
+                              <th className="py-2 px-3 text-indigo-600 bg-indigo-50/30">Local Cache Value</th>
+                              <th className="py-2 px-3 text-emerald-600 bg-emerald-50/30">Master Cloud DB Value</th>
+                              <th className="py-2 px-3 bg-slate-100/80">Reconciled Final Value</th>
+                              <th className="py-2 px-3 text-center">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 text-slate-600 font-mono">
+                            {/* Standard fields comparison */}
+                            {['itemName', 'currentStock', 'sellingPrice'].map((f) => {
+                              const isDiff = JSON.stringify(localProduct[f]) !== JSON.stringify(masterProduct[f]);
+                              const isOverridden = (clientPriorityField === f) || (masterPriorityField === f);
+                              
+                              let statusBadge = (
+                                <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase bg-slate-100 text-slate-500 rounded">
+                                  No Change
+                                </span>
+                              );
+
+                              if (isDiff) {
+                                if (isOverridden) {
+                                  statusBadge = (
+                                    <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase bg-purple-100 text-purple-700 rounded">
+                                      Rule Forced
+                                    </span>
+                                  );
+                                } else {
+                                  statusBadge = (
+                                    <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase bg-amber-100 text-amber-700 rounded">
+                                      Conflict Resolved
+                                    </span>
+                                  );
+                                }
+                              }
+
+                              return (
+                                <tr key={f} className={`hover:bg-slate-50/50 ${isDiff ? 'bg-amber-50/20' : ''}`}>
+                                  <td className="py-2 px-3 font-bold text-slate-700">{f}</td>
+                                  <td className="py-2 px-3 text-indigo-600 font-medium bg-indigo-50/10">
+                                    {String(localProduct[f])}
+                                  </td>
+                                  <td className="py-2 px-3 text-emerald-600 font-medium bg-emerald-50/10">
+                                    {String(masterProduct[f])}
+                                  </td>
+                                  <td className="py-2 px-3 bg-slate-50 font-bold text-indigo-950">
+                                    {String(resolutionResult.resolvedRecord[f])}
+                                  </td>
+                                  <td className="py-2 px-3 text-center">
+                                    {statusBadge}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+
+                            {/* Metadata fields */}
+                            <tr className="hover:bg-slate-50/50">
+                              <td className="py-2 px-3 font-bold text-slate-400">version</td>
+                              <td className="py-2 px-3 text-slate-400 bg-indigo-50/5">v{localProduct.version}</td>
+                              <td className="py-2 px-3 text-slate-400 bg-emerald-50/5">v{masterProduct.version}</td>
+                              <td className="py-2 px-3 bg-indigo-50/20 font-bold text-indigo-700">
+                                v{resolutionResult.resolvedRecord.version}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase bg-indigo-100 text-indigo-700 rounded">
+                                  Bumped (+1)
+                                </span>
+                              </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50/50">
+                              <td className="py-2 px-3 font-bold text-slate-400">updated_at</td>
+                              <td className="py-2 px-3 text-[9px] text-slate-400 bg-indigo-50/5 truncate max-w-[120px]">{localProduct.updated_at}</td>
+                              <td className="py-2 px-3 text-[9px] text-slate-400 bg-emerald-50/5 truncate max-w-[120px]">{masterProduct.updated_at}</td>
+                              <td className="py-2 px-3 bg-indigo-50/20 font-bold text-indigo-700 truncate max-w-[120px]" title={resolutionResult.resolvedRecord.updated_at}>
+                                {resolutionResult.resolvedRecord.updated_at}
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                <span className="px-1.5 py-0.5 text-[8px] font-bold uppercase bg-indigo-100 text-indigo-700 rounded">
+                                  Fresh Date
+                                </span>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Instant sync-back controls */}
+                    <div className="pt-2 border-t border-slate-100 flex flex-wrap gap-2 justify-between items-center">
+                      <div className="text-[10px] text-slate-400 flex items-center gap-1 font-mono">
+                        <Clock size={11} /> Reconciled snapshot prepared for push.
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setLocalProduct(resolutionResult.resolvedRecord);
+                            setMasterProduct(resolutionResult.resolvedRecord);
+                            alert(isMr ? 'स्थानिक कॅशे आणि मास्टर डेटाबेस यशस्वीरित्या सिंक्रोनाइझ झाले!' : 'Successfully synchronized both client state and PostgreSQL with resolved record snapshot!');
+                          }}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg transition text-xs shadow-3xs flex items-center gap-1"
+                        >
+                          <GitMerge size={12} /> Apply Sync & Save Resolves
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Reset back to conflicting defaults
+                            setLocalProduct({
+                              id: 'prod-101',
+                              itemName: 'Designer Silk Saree (Offline Edit)',
+                              itemNameMr: 'डिझायनर सिल्क साडी (ऑफलाईन)',
+                              currentStock: 120,
+                              sellingPrice: 1450,
+                              version: 3,
+                              updated_at: '2026-07-20T01:15:00.000Z'
+                            });
+                            setMasterProduct({
+                              id: 'prod-101',
+                              itemName: 'Designer Silk Saree (Master DB)',
+                              itemNameMr: 'डिझायनर सिल्क साडी (क्लाउड)',
+                              currentStock: 95,
+                              sellingPrice: 1599,
+                              version: 4,
+                              updated_at: '2026-07-20T02:00:00.000Z'
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-lg transition text-xs"
+                        >
+                          Reset Simulation
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
