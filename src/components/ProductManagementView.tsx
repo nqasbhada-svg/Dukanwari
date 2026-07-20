@@ -31,6 +31,8 @@ interface ProductManagementViewProps {
   onAddProduct: (product: Omit<Product, 'id'>) => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (id: string) => void;
+  onAddCategory: (category: Category) => void;
+  onAddBrand: (brand: Brand) => void;
 }
 
 export default function ProductManagementView({
@@ -42,7 +44,9 @@ export default function ProductManagementView({
   isMr,
   onAddProduct,
   onEditProduct,
-  onDeleteProduct
+  onDeleteProduct,
+  onAddCategory,
+  onAddBrand
 }: ProductManagementViewProps) {
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,6 +77,46 @@ export default function ProductManagementView({
   const [openingStock, setOpeningStock] = useState(0);
   const [supplierId, setSupplierId] = useState(suppliers[0]?.id || '');
 
+  // Dynamic Categories and Brands creation states
+  const [isAddingNewCat, setIsAddingNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatNameMr, setNewCatNameMr] = useState('');
+
+  const [isAddingNewBrand, setIsAddingNewBrand] = useState(false);
+  const [newBrandName, setNewBrandName] = useState('');
+
+  const handleSaveInlineCategory = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    const code = newCatName.substring(0, 3).toUpperCase();
+    const newCat: Category = {
+      id: 'cat-' + Date.now(),
+      name: newCatName.trim(),
+      nameMr: newCatNameMr.trim() || newCatName.trim(),
+      code
+    };
+    onAddCategory(newCat);
+    setCategory(newCat.name);
+    setIsAddingNewCat(false);
+    setNewCatName('');
+    setNewCatNameMr('');
+  };
+
+  const handleSaveInlineBrand = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!newBrandName.trim()) return;
+    const code = newBrandName.substring(0, 3).toUpperCase();
+    const newBr: Brand = {
+      id: 'br-' + Date.now(),
+      name: newBrandName.trim(),
+      code
+    };
+    onAddBrand(newBr);
+    setBrand(newBr.name);
+    setIsAddingNewBrand(false);
+    setNewBrandName('');
+  };
+
   // Search filter implementation
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.itemName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -93,6 +137,11 @@ export default function ProductManagementView({
     setItemNameMr('');
     setCategory(categories[0]?.name || 'Shirts');
     setBrand(brands[0]?.name || 'Raymond');
+    setIsAddingNewCat(false);
+    setIsAddingNewBrand(false);
+    setNewCatName('');
+    setNewCatNameMr('');
+    setNewBrandName('');
     setColor('');
     setSize('');
     setUnit('Pcs');
@@ -117,6 +166,11 @@ export default function ProductManagementView({
     setItemNameMr(p.itemNameMr);
     setCategory(p.category);
     setBrand(p.brand);
+    setIsAddingNewCat(false);
+    setIsAddingNewBrand(false);
+    setNewCatName('');
+    setNewCatNameMr('');
+    setNewBrandName('');
     setColor(p.color);
     setSize(p.size);
     setUnit(p.unit);
@@ -417,29 +471,109 @@ export default function ProductManagementView({
 
               {/* Row 2: Category & Brand selection */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="font-semibold block text-slate-600">{t.category}</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white"
-                  >
-                    {categories.map(c => (
-                      <option key={c.id} value={c.name}>{isMr ? c.nameMr : c.name}</option>
-                    ))}
-                  </select>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="font-semibold block text-slate-600">{t.category}</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewCat(!isAddingNewCat)}
+                      className="text-[10px] text-indigo-600 hover:text-indigo-500 font-bold hover:underline transition"
+                    >
+                      {isAddingNewCat ? (isMr ? '✕ रद्द' : '✕ Cancel') : (isMr ? '➕ नवीन वर्ग' : '➕ New Category')}
+                    </button>
+                  </div>
+                  
+                  {isAddingNewCat ? (
+                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium">Name (Eng)</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Shirts"
+                            value={newCatName}
+                            onChange={(e) => setNewCatName(e.target.value)}
+                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-slate-500 font-medium">नाव (मराठी)</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="उदा. शर्ट्स"
+                            value={newCatNameMr}
+                            onChange={(e) => setNewCatNameMr(e.target.value)}
+                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveInlineCategory}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1.5 rounded text-[10px] transition shadow-xs"
+                      >
+                        {isMr ? 'श्रेणी जतन करा' : 'Save Category'}
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white focus:border-indigo-500"
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.name}>{isMr ? c.nameMr : c.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
-                <div className="space-y-1">
-                  <label className="font-semibold block text-slate-600">{t.brand}</label>
-                  <select
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white"
-                  >
-                    {brands.map(b => (
-                      <option key={b.id} value={b.name}>{b.name}</option>
-                    ))}
-                  </select>
+
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="font-semibold block text-slate-600">{t.brand}</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingNewBrand(!isAddingNewBrand)}
+                      className="text-[10px] text-indigo-600 hover:text-indigo-500 font-bold hover:underline transition"
+                    >
+                      {isAddingNewBrand ? (isMr ? '✕ रद्द' : '✕ Cancel') : (isMr ? '➕ नवीन ब्रँड' : '➕ New Brand')}
+                    </button>
+                  </div>
+
+                  {isAddingNewBrand ? (
+                    <div className="p-3 bg-indigo-50/50 border border-indigo-100 rounded-xl space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                      <div>
+                        <label className="text-[10px] text-slate-500 font-medium">Brand Name</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. Raymond"
+                          value={newBrandName}
+                          onChange={(e) => setNewBrandName(e.target.value)}
+                          className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleSaveInlineBrand}
+                        className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-1.5 rounded text-[10px] transition shadow-xs"
+                      >
+                        {isMr ? 'ब्रँड जतन करा' : 'Save Brand'}
+                      </button>
+                    </div>
+                  ) : (
+                    <select
+                      value={brand}
+                      onChange={(e) => setBrand(e.target.value)}
+                      className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white focus:border-indigo-500"
+                    >
+                      {brands.map(b => (
+                        <option key={b.id} value={b.name}>{b.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
               </div>
 

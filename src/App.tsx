@@ -41,7 +41,9 @@ import {
   ShopSettings, 
   Expense,
   UserSession,
-  UserRole
+  UserRole,
+  Category,
+  Brand
 } from './types';
 
 // Dictionaries & Mock Databases
@@ -115,6 +117,31 @@ export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
   const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultSettings);
+
+  const [categories, setCategories] = useState<Category[]>(() => {
+    const stored = localStorage.getItem('vastraa_categories');
+    return stored ? JSON.parse(stored) : initialCategories;
+  });
+  const [brands, setBrands] = useState<Brand[]>(() => {
+    const stored = localStorage.getItem('vastraa_brands');
+    return stored ? JSON.parse(stored) : initialBrands;
+  });
+
+  const handleAddCategory = (newCat: Category) => {
+    setCategories(prev => {
+      const updated = [...prev, newCat];
+      localStorage.setItem('vastraa_categories', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleAddBrand = (newBr: Brand) => {
+    setBrands(prev => {
+      const updated = [...prev, newBr];
+      localStorage.setItem('vastraa_brands', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   // Cloud SQL data loader
   useEffect(() => {
@@ -1261,14 +1288,16 @@ export default function App() {
                   {currentView === 'products' && (
                     <ProductManagementView 
                       products={products}
-                      categories={initialCategories}
-                      brands={initialBrands}
+                      categories={categories}
+                      brands={brands}
                       suppliers={suppliers}
                       t={t}
                       isMr={isMr}
                       onAddProduct={handleAddProduct}
                       onEditProduct={handleEditProduct}
                       onDeleteProduct={handleDeleteProduct}
+                      onAddCategory={handleAddCategory}
+                      onAddBrand={handleAddBrand}
                     />
                   )}
 
@@ -1324,7 +1353,7 @@ export default function App() {
                   {currentView === 'online_catalog' && (
                     <OnlineShopCatalog 
                       products={products}
-                      categories={initialCategories}
+                      categories={categories}
                       t={t}
                       isMr={isMr}
                     />
