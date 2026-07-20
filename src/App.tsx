@@ -85,6 +85,12 @@ import ShopOwnerStatusDashboard from './components/ShopOwnerStatusDashboard';
 import QrCodeGeneratorView from './components/QrCodeGeneratorView';
 import { ShopRegistration } from './types';
 import { hashPassword, comparePassword } from './utils/crypto';
+import { 
+  getSupabaseConfig, 
+  getSupabaseClient, 
+  pullFromSupabase, 
+  syncAllDatasetsToSupabase 
+} from './utils/supabaseClient';
 
 // Helper to safely load and parse local storage data without throwing runtime syntax errors
 function safeLoadFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -226,18 +232,43 @@ export default function App() {
     };
   }, []);
 
-  const triggerSupabaseSync = () => {
+  const triggerSupabaseSync = async () => {
     if (!navigator.onLine) {
       setSupabaseOnline(false);
       return;
     }
+    
+    const client = getSupabaseClient();
+    if (!client) {
+      return;
+    }
+
     setSupabaseOnline(true);
     setSupabaseSyncing(true);
-    const timer = setTimeout(() => {
+
+    try {
+      const result = await syncAllDatasetsToSupabase({
+        registrations,
+        products,
+        customers,
+        suppliers,
+        invoices,
+        purchaseHistory,
+        expenses,
+        auditLogs,
+        shopSettings,
+        categories,
+        brands
+      });
+
+      if (result.success) {
+        setLastSyncTime(new Date());
+      }
+    } catch (err) {
+      console.error('Supabase auto-sync error:', err);
+    } finally {
       setSupabaseSyncing(false);
-      setLastSyncTime(new Date());
-    }, 1500);
-    return () => clearTimeout(timer);
+    }
   };
 
   const [syncStatusState, setSyncStatusState] = useState<{
@@ -257,77 +288,80 @@ export default function App() {
   const handleSyncAll = async () => {
     setSyncStatusState({
       status: 'syncing',
-      message: lang === 'mr' ? 'क्लाउडवर सर्व स्थानिक डेटा पुश करत आहे...' : 'Forcing batch push of local state to backend API...'
+      message: lang === 'mr' ? 'Supabase क्लाउडवर सर्व स्थानिक डेटा सिंक करत आहे...' : 'Forcing batch push of local state to Supabase API...'
     });
     setSupabaseSyncing(true);
 
     try {
-      const response = await fetch('/api/sync-all', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          products,
-          customers,
-          invoices
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(lang === 'mr' ? 'सर्व्हर एरर: सिंक्रोनाइझेशन अयशस्वी!' : 'Server error: Synchronization failed!');
+      const config = getSupabaseConfig();
+      if (!config.isConfigured) {
+        throw new Error(lang === 'mr' 
+          ? 'Supabase सेट केलेले नाही! कृपया ॲडमिन पॅनेलमध्ये Supabase क्रेडेन्शियल्स कॉन्फिगर करा.' 
+          : 'Supabase is not configured! Please provide Supabase URL and Key in the Admin Panel.'
+        );
       }
 
-      const result = await response.json();
-      if (result.success) {
+      const result = await syncAllDatasetsToSupabase({
+        registrations,
+        products,
+        customers,
+        suppliers,
+        invoices,
+        purchaseHistory,
+        expenses,
+        auditLogs,
+        shopSettings,
+        categories,
+        brands
+      });
+
+      if (result.success && result.details) {
         setSyncStatusState({
           status: 'success',
-          message: lang === 'mr' ? 'सर्व स्थानिक डेटा यशस्वीरित्या सिंक केला गेला!' : 'All local datasets successfully synchronized with the Cloud DB!',
+          message: lang === 'mr' ? 'सर्व स्थानिक डेटा Supabase वर यशस्वीरित्या सिंक केला गेला!' : 'All local datasets successfully synchronized with the Supabase Cloud DB!',
           details: {
-            productsSynced: result.productsSynced,
-            customersSynced: result.customersSynced,
-            invoicesSynced: result.invoicesSynced,
-            errors: result.errors
+            productsSynced: result.details.products,
+            customersSynced: result.details.customers,
+            invoicesSynced: result.details.invoices,
+            errors: []
           }
         });
         setLastSyncTime(new Date());
         setSupabaseOnline(true);
       } else {
-        setSyncStatusState({
-          status: 'error',
-          message: lang === 'mr' ? 'काही रेकॉर्ड सिंक करताना त्रुटी आल्या!' : 'Sync completed, but some records failed to reconcile.',
-          details: {
-            productsSynced: result.productsSynced,
-            customersSynced: result.customersSynced,
-            invoicesSynced: result.invoicesSynced,
-            errors: result.errors
-          }
-        });
+        throw new Error(result.message);
       }
     } catch (err: any) {
-      console.error('Batch sync failure:', err);
+      console.error('Supabase sync-all failure:', err);
       setSyncStatusState({
         status: 'error',
-        message: err.message || (lang === 'mr' ? 'सिंक्रोनाइझेशन अयशस्वी: नेटवर्क जोडणी तपासा!' : 'Synchronization failed. Please check backend connection.')
+        message: err.message || (lang === 'mr' ? 'सिंक्रोनाइझेशन अयशस्वी: नेटवर्क जोडणी किंवा क्रेडेन्शियल्स तपासा!' : 'Synchronization failed. Please check your Supabase credentials or connection.')
       });
     } finally {
       setSupabaseSyncing(false);
     }
   };
 
-  // Sync background updates when local datasets edit
+  // Sync background updates with a 5-second debounce when local datasets are modified
   useEffect(() => {
-    if (products.length > 0) {
-      const cleanup = triggerSupabaseSync();
-      return cleanup;
-    }
-  }, [products, customers, suppliers, invoices, purchaseHistory, expenses, categories, brands]);
+    const config = getSupabaseConfig();
+    if (!config.isConfigured) return;
 
-  // Periodic automatic health check heartbeat (every 45s)
+    const timer = setTimeout(() => {
+      triggerSupabaseSync();
+    }, 5000);
+
+    return () => clearTimeout(timer);
+  }, [products, customers, suppliers, invoices, purchaseHistory, expenses, categories, brands, registrations, shopSettings]);
+
+  // Periodic automatic health check heartbeat and pull (every 60s)
   useEffect(() => {
     const interval = setInterval(() => {
-      triggerSupabaseSync();
-    }, 45000);
+      const config = getSupabaseConfig();
+      if (config.isConfigured) {
+        triggerSupabaseSync();
+      }
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -384,11 +418,65 @@ export default function App() {
     });
   };
 
-  // Cloud SQL data loader
+  // Cloud SQL & Supabase data loader
   useEffect(() => {
     const loadCloudData = async () => {
       try {
         setIsLoadingCloudData(true);
+
+        // Try Supabase first if configured
+        const config = getSupabaseConfig();
+        if (config.isConfigured) {
+          console.log('Supabase configured. Attempting to pull cloud datasets...');
+          const [
+            regsPull,
+            prodsPull,
+            custsPull,
+            suppsPull,
+            invsPull,
+            purchPull,
+            expsPull,
+            logsPull,
+            settsPull,
+            catsPull,
+            brsPull
+          ] = await Promise.all([
+            pullFromSupabase<any>('registrations'),
+            pullFromSupabase<any>('products'),
+            pullFromSupabase<any>('customers'),
+            pullFromSupabase<any>('suppliers'),
+            pullFromSupabase<any>('invoices'),
+            pullFromSupabase<any>('purchaseHistory'),
+            pullFromSupabase<any>('expenses'),
+            pullFromSupabase<any>('auditLogs'),
+            pullFromSupabase<any>('shopSettings'),
+            pullFromSupabase<any>('categories'),
+            pullFromSupabase<any>('brands')
+          ]);
+
+          const anySuccess = regsPull !== null || prodsPull !== null || custsPull !== null || invsPull !== null;
+          if (anySuccess) {
+            console.log('Successfully pulled datasets from Supabase!');
+            if (regsPull && regsPull.length > 0) setRegistrations(regsPull);
+            if (prodsPull && prodsPull.length > 0) setProducts(prodsPull);
+            if (custsPull && custsPull.length > 0) setCustomers(custsPull);
+            if (suppsPull && suppsPull.length > 0) setSuppliers(suppsPull);
+            if (invsPull && invsPull.length > 0) setInvoices(invsPull);
+            if (purchPull && purchPull.length > 0) setPurchaseHistory(purchPull);
+            if (expsPull && expsPull.length > 0) setExpenses(expsPull);
+            if (logsPull && logsPull.length > 0) setAuditLogs(logsPull);
+            if (settsPull && settsPull.length > 0) setShopSettings(settsPull[0]);
+            if (catsPull && catsPull.length > 0) setCategories(catsPull);
+            if (brsPull && brsPull.length > 0) setBrands(brsPull);
+            
+            setSupabaseOnline(true);
+            return; // Successful Supabase load, skip Cloud SQL loader
+          } else {
+            console.warn('Failed to pull from Supabase (tables might not exist yet). Falling back to Cloud SQL...');
+          }
+        }
+
+        // Fallback to Cloud SQL if Supabase not configured or failed
         const [
           regsRes,
           productsRes,

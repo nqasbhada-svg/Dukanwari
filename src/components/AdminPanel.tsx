@@ -25,10 +25,23 @@ import {
   Clock,
   Sliders,
   User,
-  Globe
+  Globe,
+  Link,
+  Lock,
+  Eye,
+  EyeOff,
+  Copy,
+  Check
 } from 'lucide-react';
 import { ShopSettings, AuditLog, UserSession } from '../types';
 import { ConflictResolver, SyncRecord, CollisionConfig, CollisionResolutionResult, ResolutionStrategy } from '../utils/conflictResolver';
+import { 
+  getSupabaseConfig, 
+  saveSupabaseConfig, 
+  clearSupabaseConfig, 
+  testSupabaseConnection, 
+  SUPABASE_SETUP_SQL 
+} from '../utils/supabaseClient';
 
 interface AdminPanelProps {
   settings: ShopSettings;
@@ -177,6 +190,67 @@ export default function AdminPanel({
   const [clientPriorityField, setClientPriorityField] = useState<string>('');
   const [masterPriorityField, setMasterPriorityField] = useState<string>('');
   const [resolutionResult, setResolutionResult] = useState<CollisionResolutionResult<any> | null>(null);
+
+  const [supabaseUrl, setSupabaseUrl] = useState('');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
+  const [showAnonKey, setShowAnonKey] = useState(false);
+  const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [testMessage, setTestMessage] = useState('');
+  const [showSqlCopier, setShowSqlCopier] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
+
+  // Load existing credentials on component mount
+  useEffect(() => {
+    const config = getSupabaseConfig();
+    setSupabaseUrl(config.url);
+    setSupabaseAnonKey(config.anonKey);
+  }, []);
+
+  const handleTestAndSave = async () => {
+    if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) {
+      setTestStatus('error');
+      setTestMessage(isMr ? 'कृपया URL आणि Anon Key दोन्ही भरा!' : 'Please provide both the Supabase URL and Anon Key!');
+      return;
+    }
+
+    setTestStatus('testing');
+    setTestMessage(isMr ? 'कनेक्शनची तपासणी करत आहे...' : 'Testing connection to your Supabase project...');
+
+    const connected = await testSupabaseConnection(supabaseUrl, supabaseAnonKey);
+    if (connected) {
+      saveSupabaseConfig(supabaseUrl, supabaseAnonKey);
+      setTestStatus('success');
+      setTestMessage(isMr ? 'Supabase कनेक्शन यशस्वी! क्रेडेन्शियल्स जतन केले आहेत.' : 'Supabase connected successfully! Credentials saved and persistent.');
+      
+      // Instantly trigger a full synchronization
+      if (onSyncAll) {
+        onSyncAll();
+      }
+    } else {
+      setTestStatus('error');
+      setTestMessage(isMr 
+        ? 'कनेक्शन अयशस्वी! कृपया URL, Anon Key तपासा आणि Supabase मध्ये डेटाबेस टेबल्स तयार असल्याची खात्री करा.' 
+        : 'Connection failed! Please check your URL, Anon Key, or ensure the Supabase schema is set up.'
+      );
+    }
+  };
+
+  const handleDisconnect = () => {
+    if (confirm(isMr ? 'तुम्हाला खात्री आहे की तुम्ही Supabase डिस्कनेक्ट करू इच्छिता?' : 'Are you sure you want to disconnect Supabase?')) {
+      clearSupabaseConfig();
+      setSupabaseUrl('');
+      setSupabaseAnonKey('');
+      setTestStatus('idle');
+      setTestMessage('');
+      alert(isMr ? 'Supabase डिस्कनेक्ट केले गेले.' : 'Supabase disconnected successfully.');
+    }
+  };
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2000);
+  };
 
   const runResolution = () => {
     const config: CollisionConfig = {
@@ -825,6 +899,154 @@ export default function AdminPanel({
         {/* TAB 3: Backup & Cloud Sync */}
         {activeAdminTab === 'backup' && (
           <div className="space-y-6 text-xs">
+            {/* Supabase Connection Settings Card */}
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                    <Globe size={16} />
+                  </span>
+                  <div>
+                    <h3 className="font-bold text-slate-900 text-sm">{isMr ? 'Supabase क्लाउड स्टोरेज सेटिंग्ज' : 'Supabase Cloud Persistence'}</h3>
+                    <p className="text-slate-500 text-xs">{isMr ? 'मल्टिपल डिव्हाइस डेटा सिंक्रोनाइझेशनसाठी Supabase कॉन्फिगर करा' : 'Configure Supabase to persist your shop & admin details across multiple devices.'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowSqlCopier(!showSqlCopier)}
+                    className="px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 text-slate-700 font-bold rounded-lg transition text-[10px]"
+                  >
+                    {showSqlCopier ? (isMr ? 'SQL लपवा' : 'Hide Setup SQL') : (isMr ? 'SQL दाखवा' : 'Show Setup SQL')}
+                  </button>
+                  {supabaseUrl && (
+                    <button
+                      onClick={handleDisconnect}
+                      className="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-lg transition text-[10px]"
+                    >
+                      {isMr ? 'डिस्कनेक्ट करा' : 'Disconnect'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Connection Form */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700 uppercase tracking-wide text-[10px]">{isMr ? 'Supabase प्रकल्प URL' : 'Supabase Project URL'}</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                      <Link size={12} />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="https://your-project-id.supabase.co"
+                      value={supabaseUrl}
+                      onChange={(e) => setSupabaseUrl(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-3 py-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400 block">{isMr ? 'तुमच्या Supabase डॅशबोर्डवरील API Settings मधील URL' : 'Find in Project Settings > API > Project URL'}</span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-bold text-slate-700 uppercase tracking-wide text-[10px]">{isMr ? 'Supabase Anon API की' : 'Supabase Anon API Key'}</label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                      <Lock size={12} />
+                    </span>
+                    <input
+                      type={showAnonKey ? 'text' : 'password'}
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      value={supabaseAnonKey}
+                      onChange={(e) => setSupabaseAnonKey(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-lg pl-9 pr-10 py-2 font-mono text-xs focus:ring-1 focus:ring-indigo-500 focus:outline-hidden"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAnonKey(!showAnonKey)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                    >
+                      {showAnonKey ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block">{isMr ? 'तुमच्या Supabase डॅशबोर्डवरील API Settings मधील anon (public) की' : 'Find in Project Settings > API > anon / public Key'}</span>
+                </div>
+              </div>
+
+              {/* Status and Action Panel */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-600">{isMr ? 'कनेक्शन स्थिती:' : 'Connection Status:'}</span>
+                  {testStatus === 'success' ? (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full font-bold uppercase text-[9px] flex items-center gap-1">
+                      <CheckCircle2 size={10} /> {isMr ? 'कनेक्टेड' : 'Connected'}
+                    </span>
+                  ) : testStatus === 'testing' ? (
+                    <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 rounded-full font-bold uppercase text-[9px] flex items-center gap-1 animate-pulse">
+                      <RefreshCw size={10} className="animate-spin" /> {isMr ? 'तपासत आहे' : 'Testing'}
+                    </span>
+                  ) : testStatus === 'error' ? (
+                    <span className="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full font-bold uppercase text-[9px] flex items-center gap-1">
+                      <AlertCircle size={10} /> {isMr ? 'त्रुटी' : 'Failed'}
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 bg-slate-200 text-slate-600 rounded-full font-bold uppercase text-[9px]">
+                      {isMr ? 'कॉन्फिगर केलेले नाही' : 'Not Configured'}
+                    </span>
+                  )}
+                </div>
+
+                <button
+                  onClick={handleTestAndSave}
+                  disabled={testStatus === 'testing'}
+                  className={`flex items-center justify-center gap-1.5 font-bold px-4 py-2 rounded-lg transition text-xs shrink-0 ${
+                    testStatus === 'testing'
+                      ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'
+                  }`}
+                >
+                  <RefreshCw size={13} className={testStatus === 'testing' ? 'animate-spin' : ''} />
+                  {isMr ? 'कनेक्शन तपासा आणि जतन करा' : 'Test & Save Connection'}
+                </button>
+              </div>
+
+              {testMessage && (
+                <div className={`p-3 rounded-lg border text-[11px] leading-relaxed font-medium ${
+                  testStatus === 'success' 
+                    ? 'bg-emerald-50 border-emerald-100 text-emerald-800' 
+                    : testStatus === 'error' 
+                      ? 'bg-rose-50 border-rose-100 text-rose-800' 
+                      : 'bg-amber-50 border-amber-100 text-amber-800'
+                }`}>
+                  {testMessage}
+                </div>
+              )}
+
+              {/* SQL Copier Panel */}
+              {showSqlCopier && (
+                <div className="bg-slate-900 text-slate-100 rounded-xl p-4 space-y-2 border border-slate-800 animate-fadeIn">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-xs text-indigo-400 font-mono">SUPABASE_SETUP_SCHEMA.sql</span>
+                    <button
+                      onClick={handleCopySql}
+                      className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-slate-300 px-2.5 py-1 rounded-md transition text-[10px] font-bold"
+                    >
+                      {copiedSql ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                      {copiedSql ? (isMr ? 'कॉपी केले!' : 'Copied!') : (isMr ? 'SQL कॉपी करा' : 'Copy SQL')}
+                    </button>
+                  </div>
+                  <pre className="text-[10px] font-mono leading-relaxed overflow-x-auto max-h-48 text-slate-300 whitespace-pre scrollbar-thin scrollbar-thumb-slate-800">
+                    {SUPABASE_SETUP_SQL}
+                  </pre>
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    {isMr 
+                      ? '💡 हा SQL स्क्रिप्ट तुमच्या Supabase डॅशबोर्डमधील "SQL Editor" मध्ये पेस्ट करा आणि "Run" दाबा जेणेकरून आवश्यक टेबल्स तयार होतील.' 
+                      : '💡 Copy and run this script in your Supabase project SQL Editor to create all necessary database tables and enable real-time sync.'}
+                  </p>
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-4">
               <div>
                 <h3 className="font-bold text-slate-900 text-sm">Supabase Database Backups & Synchronization</h3>
@@ -853,8 +1075,8 @@ export default function AdminPanel({
                   </div>
                   <p className="text-slate-500 text-xs">
                     {isMr 
-                      ? 'तुमचा स्थानिक डेटा (सर्व उत्पादने, ग्राहक आणि डिजिटल सेल्स बिले) थेट सर्व्हरवरील मुख्य डेटाबेसमध्ये त्वरित सिंक करा.' 
-                      : 'Force push and upsert all local products, CRM customers, and digital sales invoices into the Cloud SQL PostgreSQL database.'}
+                      ? 'तुमचा स्थानिक डेटा (सर्व उत्पादने, ग्राहक आणि डिजिटल सेल्स बिले) थेट तुमच्या Supabase डेटाबेसमध्ये त्वरित सिंक करा.' 
+                      : 'Force push and upsert all local products, CRM customers, and digital sales invoices into the Supabase PostgreSQL database.'}
                   </p>
                 </div>
                 <button

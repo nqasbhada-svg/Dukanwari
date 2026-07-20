@@ -257,7 +257,7 @@ async function startServer() {
   // --- Bulk Sync All Endpoint ---
   app.post('/api/sync-all', async (req, res) => {
     try {
-      const { products: productsList, customers: customersList, invoices: invoicesList } = req.body;
+      const { products: productsList, customers: customersList, invoices: invoicesList } = req.body || {};
       
       const syncStatus = {
         productsSynced: 0,
@@ -269,10 +269,14 @@ async function startServer() {
       if (Array.isArray(productsList)) {
         for (const item of productsList) {
           try {
+            if (!item || typeof item !== 'object') {
+              throw new Error('Product item is not a valid object');
+            }
             await upsertProduct(item);
             syncStatus.productsSynced++;
           } catch (e: any) {
-            syncStatus.errors.push(`Product [${item.itemName || item.id}]: ${e.message}`);
+            const label = item && typeof item === 'object' ? (item.itemName || item.id || 'unnamed') : 'invalid';
+            syncStatus.errors.push(`Product [${label}]: ${e.message}`);
           }
         }
       }
@@ -280,10 +284,14 @@ async function startServer() {
       if (Array.isArray(customersList)) {
         for (const item of customersList) {
           try {
+            if (!item || typeof item !== 'object') {
+              throw new Error('Customer item is not a valid object');
+            }
             await upsertCustomer(item);
             syncStatus.customersSynced++;
           } catch (e: any) {
-            syncStatus.errors.push(`Customer [${item.name || item.id}]: ${e.message}`);
+            const label = item && typeof item === 'object' ? (item.name || item.id || 'unnamed') : 'invalid';
+            syncStatus.errors.push(`Customer [${label}]: ${e.message}`);
           }
         }
       }
@@ -291,10 +299,14 @@ async function startServer() {
       if (Array.isArray(invoicesList)) {
         for (const item of invoicesList) {
           try {
+            if (!item || typeof item !== 'object') {
+              throw new Error('Invoice item is not a valid object');
+            }
             await upsertInvoice(item);
             syncStatus.invoicesSynced++;
           } catch (e: any) {
-            syncStatus.errors.push(`Invoice [${item.invoiceNumber || item.id}]: ${e.message}`);
+            const label = item && typeof item === 'object' ? (item.invoiceNumber || item.id || 'unnamed') : 'invalid';
+            syncStatus.errors.push(`Invoice [${label}]: ${e.message}`);
           }
         }
       }
@@ -305,6 +317,7 @@ async function startServer() {
         ...syncStatus
       });
     } catch (error: any) {
+      console.error('Critical failure in /api/sync-all:', error);
       res.status(500).json({ error: error.message });
     }
   });
