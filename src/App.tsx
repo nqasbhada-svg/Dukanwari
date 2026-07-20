@@ -2088,6 +2088,7 @@ export default function App() {
                       invoices={invoices}
                       purchaseHistory={purchaseHistory}
                       expenses={expenses}
+                      customers={customers}
                       t={t}
                       isMr={isMr}
                     />
