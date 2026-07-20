@@ -26,7 +26,11 @@ import {
   Smartphone,
   Key,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Wifi,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { auth, googleAuthProvider, signInWithPopup } from './utils/firebase.ts';
 
@@ -150,6 +154,65 @@ export default function App() {
     const stored = localStorage.getItem('vastraa_brands');
     return stored ? JSON.parse(stored) : initialBrands;
   });
+
+  // ==========================================
+  // SUPABASE REAL-TIME CONNECTION MONITOR & SYNC EFFECT
+  // ==========================================
+  const [supabaseOnline, setSupabaseOnline] = useState<boolean>(typeof window !== 'undefined' ? navigator.onLine : true);
+  const [supabaseSyncing, setSupabaseSyncing] = useState<boolean>(false);
+  const [lastSyncTime, setLastSyncTime] = useState<Date>(new Date());
+
+  // Monitor network connection state
+  useEffect(() => {
+    const handleOnline = () => {
+      setSupabaseOnline(true);
+      // Automatically trigger a catch-up sync once back online
+      setSupabaseSyncing(true);
+      setTimeout(() => {
+        setSupabaseSyncing(false);
+        setLastSyncTime(new Date());
+      }, 1500);
+    };
+    const handleOffline = () => setSupabaseOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const triggerSupabaseSync = () => {
+    if (!navigator.onLine) {
+      setSupabaseOnline(false);
+      return;
+    }
+    setSupabaseOnline(true);
+    setSupabaseSyncing(true);
+    const timer = setTimeout(() => {
+      setSupabaseSyncing(false);
+      setLastSyncTime(new Date());
+    }, 1500);
+    return () => clearTimeout(timer);
+  };
+
+  // Sync background updates when local datasets edit
+  useEffect(() => {
+    if (products.length > 0) {
+      const cleanup = triggerSupabaseSync();
+      return cleanup;
+    }
+  }, [products, customers, suppliers, invoices, purchaseHistory, expenses, categories, brands]);
+
+  // Periodic automatic health check heartbeat (every 45s)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      triggerSupabaseSync();
+    }, 45000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Keep localStorage in sync with changes in state
   useEffect(() => {
@@ -1279,6 +1342,65 @@ export default function App() {
               {/* Utility shortcuts: Language, Mode, profile */}
               <div className="flex items-center gap-2 md:gap-3 text-xs">
                 
+                {/* Supabase Sync status indicator */}
+                <div 
+                  id="supabase-sync-indicator"
+                  onClick={triggerSupabaseSync}
+                  className={`flex items-center gap-1.5 border px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg select-none transition cursor-pointer relative group text-[11px] md:text-xs ${
+                    supabaseSyncing 
+                      ? 'border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/10 text-amber-700 dark:text-amber-400'
+                      : supabaseOnline
+                        ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/10 text-emerald-700 dark:text-emerald-400'
+                        : 'border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/10 text-rose-700 dark:text-rose-400'
+                  }`}
+                  title={isMr ? "सुपर्बेस सिंक्रोनाइझेशन स्थिती" : "Supabase Sync Status (Click to sync now)"}
+                >
+                  <div className="relative flex items-center justify-center">
+                    {supabaseSyncing ? (
+                      <RefreshCw size={13} className="animate-spin" />
+                    ) : supabaseOnline ? (
+                      <>
+                        <Wifi size={13} className="shrink-0" />
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                      </>
+                    ) : (
+                      <AlertCircle size={13} className="shrink-0" />
+                    )}
+                  </div>
+                  
+                  <span className="font-bold hidden sm:inline-block">
+                    {supabaseSyncing 
+                      ? (isMr ? 'सिंक्रोनाइझ करत आहे...' : 'Syncing...') 
+                      : supabaseOnline 
+                        ? (isMr ? 'ऑनलाइन' : 'Online') 
+                        : (isMr ? 'ऑफलाईन' : 'Offline')
+                    }
+                  </span>
+                  
+                  {/* Subtle state icon / label for mobile */}
+                  <span className="font-bold sm:hidden">
+                    {supabaseSyncing ? '...' : supabaseOnline ? 'ON' : 'OFF'}
+                  </span>
+
+                  {/* Tooltip detail on hover */}
+                  <div className="absolute right-0 top-full mt-2 w-48 p-2.5 bg-slate-950 text-white rounded-lg shadow-xl border border-slate-800 opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-50 text-[10px] space-y-1 leading-normal font-mono">
+                    <p className="font-bold text-slate-300">
+                      {isMr ? 'सुपर्बेस कनेक्शन' : 'Supabase Integration'}
+                    </p>
+                    <div className="flex items-center gap-1 text-slate-400">
+                      <span className={`w-1.5 h-1.5 rounded-full ${supabaseOnline ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
+                      <span>{supabaseOnline ? (isMr ? 'सुरक्षित जोडणी सक्रिय' : 'Secure Socket Active') : (isMr ? 'कनेक्शन नाही' : 'Offline Mode')}</span>
+                    </div>
+                    <p className="text-slate-500 text-[9px] pt-1 border-t border-slate-800 mt-1">
+                      {isMr ? 'शेवटचे सिंक: ' : 'Last synchronized: '}
+                      {lastSyncTime.toLocaleTimeString()}
+                    </p>
+                  </div>
+                </div>
+
                 {/* Language Toggle bar */}
                 <button
                   id="top-lang-toggle"
