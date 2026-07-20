@@ -2028,6 +2028,8 @@ export default function App() {
                       t={t}
                       isMr={isMr}
                       onNavigate={(view) => setCurrentView(view)}
+                      shopSettings={shopSettings}
+                      session={session}
                     />
                   )}
 
