@@ -364,6 +364,10 @@ export default function App() {
     localStorage.setItem('vastraa_shopSettings', JSON.stringify(shopSettings));
   }, [shopSettings]);
 
+  useEffect(() => {
+    localStorage.setItem('vastraa_registrations', JSON.stringify(registrations));
+  }, [registrations]);
+
   const handleAddCategory = (newCat: Category) => {
     setCategories(prev => {
       const updated = [...prev, newCat];
@@ -1970,9 +1974,9 @@ export default function App() {
               {/* Utility shortcuts: Language, Mode, profile */}
               <div className="flex items-center gap-2 md:gap-3 text-xs">
                 
-                {/* Supabase Sync status indicator */}
+                 {/* Cloud DB Sync status indicator */}
                 <div 
-                  id="supabase-sync-indicator"
+                  id="cloud-db-sync-indicator"
                   onClick={triggerSupabaseSync}
                   className={`flex items-center gap-1.5 border px-2 py-1 md:px-2.5 md:py-1.5 rounded-lg select-none transition cursor-pointer relative group text-[11px] md:text-xs ${
                     supabaseSyncing 
@@ -1981,7 +1985,7 @@ export default function App() {
                         ? 'border-emerald-200 bg-emerald-50/40 dark:border-emerald-900/40 dark:bg-emerald-950/10 text-emerald-700 dark:text-emerald-400'
                         : 'border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/10 text-rose-700 dark:text-rose-400'
                   }`}
-                  title={isMr ? "सुपर्बेस सिंक्रोनाइझेशन स्थिती" : "Supabase Sync Status (Click to sync now)"}
+                  title={isMr ? "क्लाउड डेटाबेस सिंक्रोनाइझेशन स्थिती" : "Cloud DB Sync Status (Click to sync now)"}
                 >
                   <div className="relative flex items-center justify-center">
                     {supabaseSyncing ? (
@@ -2016,11 +2020,11 @@ export default function App() {
                   {/* Tooltip detail on hover */}
                   <div className="absolute right-0 top-full mt-2 w-48 p-2.5 bg-slate-950 text-white rounded-lg shadow-xl border border-slate-800 opacity-0 group-hover:opacity-100 transition duration-200 pointer-events-none z-50 text-[10px] space-y-1 leading-normal font-mono">
                     <p className="font-bold text-slate-300">
-                      {isMr ? 'सुपर्बेस कनेक्शन' : 'Supabase Integration'}
+                      {isMr ? 'क्लाउड डेटाबेस कनेक्शन' : 'Cloud DB Connection'}
                     </p>
                     <div className="flex items-center gap-1 text-slate-400">
                       <span className={`w-1.5 h-1.5 rounded-full ${supabaseOnline ? 'bg-emerald-400' : 'bg-rose-400'}`}></span>
-                      <span>{supabaseOnline ? (isMr ? 'सुरक्षित जोडणी सक्रिय' : 'Secure Socket Active') : (isMr ? 'कनेक्शन नाही' : 'Offline Mode')}</span>
+                      <span>{supabaseOnline ? (isMr ? 'सुरक्षित जोडणी सक्रिय' : 'Secure SQL Connection') : (isMr ? 'कनेक्शन नाही' : 'Offline Mode')}</span>
                     </div>
                     <p className="text-slate-500 text-[9px] pt-1 border-t border-slate-800 mt-1">
                       {isMr ? 'शेवटचे सिंक: ' : 'Last synchronized: '}

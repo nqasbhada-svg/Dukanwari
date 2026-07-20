@@ -48,6 +48,21 @@ export default function AdminApprovalView({ registrations, onUpdateStatus, isMr 
   const [selectedReg, setSelectedReg] = useState<ShopRegistration | null>(registrations[0] || null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
+  // Keep selectedReg in sync when registrations load or change
+  React.useEffect(() => {
+    if (!selectedReg && registrations.length > 0) {
+      setSelectedReg(registrations[0]);
+      setNotesText(registrations[0].subscription.notes || '');
+      setSubType(registrations[0].subscription.subscriptionType);
+      if (registrations[0].subscription.startDate) {
+        setStartDate(registrations[0].subscription.startDate);
+      }
+      if (registrations[0].subscription.endDate) {
+        setEndDate(registrations[0].subscription.endDate);
+      }
+    }
+  }, [registrations, selectedReg]);
+
   // Interactive Review States (Form values to configure active subscription)
   const [subType, setSubType] = useState<'Lifetime' | '1 Month' | '3 Months' | '6 Months' | '1 Year' | 'Custom'>('1 Year');
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);

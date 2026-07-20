@@ -81,7 +81,114 @@ export function mapDbRecordToRegistration(dbRecord: any) {
 
 export async function getAllRegistrations() {
   try {
-    const records = await db.select().from(registrations).orderBy(desc(registrations.createdAt));
+    let records = await db.select().from(registrations).orderBy(desc(registrations.createdAt));
+    
+    const defaultRegs = [
+      {
+        id: 'reg-2026-001',
+        shopName: "Sanskriti Fashion",
+        ownerName: "Sanskriti Patil",
+        mobile: "9876543211",
+        email: "sanskriti@example.com",
+        gstNumber: "27AAAAA1234A1ZA",
+        businessRegNumber: "BRN-00123",
+        city: "Pune",
+        state: "Maharashtra",
+        pincode: "411001",
+        username: "sanskriti",
+        password: "password123",
+        shopType: "Retail Boutique",
+        employeesCount: 4,
+        openingDate: "2026-01-15",
+        ownerIdProof: "sanskriti_aadhar.jpg",
+        shopLicense: "sanskriti_license.pdf",
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "Pending",
+        subscriptionType: "1 Year",
+        startDate: null,
+        endDate: null,
+        notes: "New registration submitted. Pending review.",
+        createdAt: "2026-07-19T10:00:00.000Z"
+      },
+      {
+        id: 'reg-2026-002',
+        shopName: "Rajshree Garments",
+        ownerName: "Rajesh Shinde",
+        mobile: "9876543212",
+        email: "rajesh@example.com",
+        gstNumber: "27BBBBB1234B1ZB",
+        businessRegNumber: "BRN-00456",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pincode: "400001",
+        username: "rajesh",
+        password: "password123",
+        shopType: "Wholesale Clothes",
+        employeesCount: 8,
+        openingDate: "2025-05-10",
+        ownerIdProof: "rajesh_pan.jpg",
+        shopLicense: "rajesh_license.pdf",
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "Active",
+        subscriptionType: "1 Year",
+        startDate: "2026-07-01",
+        endDate: "2027-07-01",
+        notes: "Activated on 2026-07-01",
+        createdAt: "2026-06-30T10:00:00.000Z"
+      },
+      {
+        id: 'reg-2026-003',
+        shopName: "Pooja Sarees",
+        ownerName: "Pooja Kadam",
+        mobile: "9876543213",
+        email: "pooja@example.com",
+        gstNumber: "27CCCCC1234C1ZC",
+        businessRegNumber: "BRN-00789",
+        city: "Nagpur",
+        state: "Maharashtra",
+        pincode: "440001",
+        username: "pooja",
+        password: "password123",
+        shopType: "Retail Sarees",
+        employeesCount: 3,
+        openingDate: "2026-03-20",
+        ownerIdProof: "pooja_aadhar.jpg",
+        shopLicense: null,
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "MoreInfoNeeded",
+        subscriptionType: "1 Year",
+        startDate: null,
+        endDate: null,
+        notes: "Uploaded shop license is blurred. Please re-upload clear copy.",
+        createdAt: "2026-07-18T10:00:00.000Z"
+      }
+    ];
+
+    let needsRefetch = false;
+    const defaultIds = ['reg-2026-001', 'reg-2026-002', 'reg-2026-003'];
+    
+    for (const regId of defaultIds) {
+      const exists = records.some(r => r.id === regId);
+      if (!exists) {
+        const reg = defaultRegs.find(d => d.id === regId);
+        if (reg) {
+          try {
+            await db.insert(registrations).values(reg).onConflictDoNothing();
+            needsRefetch = true;
+          } catch (seedErr) {
+            console.error(`Failed to seed registration ${reg.id}:`, seedErr);
+          }
+        }
+      }
+    }
+
+    if (needsRefetch) {
+      records = await db.select().from(registrations).orderBy(desc(registrations.createdAt));
+    }
+    
     return records.map(mapDbRecordToRegistration);
   } catch (error) {
     handleDbError('getAllRegistrations', error);
