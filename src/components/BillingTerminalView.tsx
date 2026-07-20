@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Product, InvoiceItem, Invoice, Customer, ShopSettings, AppTranslations } from '../types';
 import { getWhatsAppBillingMessage, openWhatsAppBillingShare } from '../utils/whatsapp';
+import { downloadElementAsPDF } from '../utils/pdfGenerator';
 
 interface BillingTerminalViewProps {
   products: Product[];
@@ -628,7 +629,7 @@ export default function BillingTerminalView({
           >
             {/* Left: Receipt Preview */}
             <div className="w-full md:w-1/2 p-8 bg-slate-50 flex flex-col items-center justify-center relative">
-              <div className="w-[300px] bg-white border-x border-t border-slate-200 shadow-sm font-mono text-[10px] p-6 text-slate-800 leading-relaxed overflow-hidden relative">
+              <div id="invoice-preview-modal-area" className="w-[300px] bg-white border-x border-t border-slate-200 shadow-sm font-mono text-[10px] p-6 text-slate-800 leading-relaxed overflow-hidden relative">
                 {/* Jagged edge bottom effect using border-image or pseudo-element conceptually */}
                 <div className="absolute -bottom-2 left-0 right-0 h-4 bg-repeat-x flex items-end"></div>
                 
@@ -747,11 +748,18 @@ export default function BillingTerminalView({
 
               <div className="space-y-3 mt-8 pt-6 border-t border-slate-100">
                 <button
-                  onClick={() => alert(isMr ? 'प्रिंट आदेश यशस्वीरित्या पाठवला!' : 'Invoice printed successfully!')}
-                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-extrabold text-sm flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20 transition-colors"
+                  onClick={async () => {
+                    const success = await downloadElementAsPDF('invoice-preview-modal-area', `Invoice_${activeInvoice?.invoiceNumber}.pdf`);
+                    if (success) {
+                      alert(isMr ? 'पीडीएफ यशस्वीरित्या जतन केली!' : 'PDF receipt downloaded successfully!');
+                    } else {
+                      window.print();
+                    }
+                  }}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-extrabold text-sm flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20 transition-all animate-pulse hover:animate-none"
                 >
                   <Printer size={18} />
-                  Print Physical Receipt
+                  {isMr ? 'पीडीएफ बिल डाउनलोड करा / प्रिंट' : 'Generate & Download PDF'}
                 </button>
                 <button
                   onClick={() => {

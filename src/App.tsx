@@ -91,6 +91,7 @@ import {
   pullFromSupabase, 
   syncAllDatasetsToSupabase 
 } from './utils/supabaseClient';
+import { downloadElementAsPDF } from './utils/pdfGenerator';
 
 // Helper to safely load and parse local storage data without throwing runtime syntax errors
 function safeLoadFromLocalStorage<T>(key: string, defaultValue: T): T {
@@ -1182,6 +1183,16 @@ export default function App() {
       );
     }
 
+    const handleDownloadPdf = async () => {
+      const isA4 = publicPreviewTemplate === 'a4';
+      const elementId = isA4 ? 'public-invoice-a4' : 'public-invoice-thermal';
+      const filename = `Invoice_${activeInvoice.invoiceNumber}.pdf`;
+      const success = await downloadElementAsPDF(elementId, filename);
+      if (!success) {
+        window.print();
+      }
+    };
+
     return (
       <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex flex-col">
         {/* Public Header */}
@@ -1211,8 +1222,8 @@ export default function App() {
             </div>
 
             <button 
-              onClick={() => window.print()}
-              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+              onClick={handleDownloadPdf}
+              className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition animate-pulse"
             >
               <Printer size={13} />
               <span className="hidden sm:inline">Print / Save PDF</span>
@@ -1234,7 +1245,7 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center items-start print:bg-white print:p-0">
           <div className="w-full flex justify-center print:block">
             {publicPreviewTemplate === 'a4' ? (
-              <div className="bg-white p-8 w-full max-w-2xl border border-slate-200 rounded-2xl shadow-xl font-sans space-y-6 text-slate-800 print:shadow-none print:border-none print:p-0 print:max-w-none">
+              <div id="public-invoice-a4" className="bg-white p-8 w-full max-w-2xl border border-slate-200 rounded-2xl shadow-xl font-sans space-y-6 text-slate-800 print:shadow-none print:border-none print:p-0 print:max-w-none">
                 {/* Company Header */}
                 <div className="flex justify-between items-start border-b border-slate-200 pb-4">
                   <div className="space-y-1">
@@ -1351,7 +1362,7 @@ export default function App() {
               </div>
             ) : (
               /* Thermal Receipt layout */
-              <div className="bg-white p-4 w-[280px] border border-slate-200 rounded-lg shadow-xl font-mono text-[9px] text-slate-800 space-y-3 print:shadow-none print:border-none print:m-0">
+              <div id="public-invoice-thermal" className="bg-white p-4 w-[280px] border border-slate-200 rounded-lg shadow-xl font-mono text-[9px] text-slate-800 space-y-3 print:shadow-none print:border-none print:m-0">
                 <div className="text-center space-y-1">
                   <h3 className="font-bold text-xs leading-none uppercase">{shopSettings.shopName}</h3>
                   <p className="text-[8px] leading-tight text-slate-500">{shopSettings.address}</p>
