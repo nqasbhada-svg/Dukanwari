@@ -454,27 +454,40 @@ export default function App() {
     }
   };
 
-  const fastLogin = (role: 'owner' | 'employee') => {
-    const mob = role === 'owner' ? '9876543210' : '9988776655';
+  const fastLogin = (role: 'system_admin' | 'owner' | 'employee') => {
+    const mob = role === 'system_admin' ? '9876543210' : (role === 'owner' ? '9876543210' : '9988776655');
     setSession({
       role,
       mobile: mob,
-      name: role === 'owner' ? 'Rahul Deshmukh (Owner)' : 'Amit Shinde (Employee)',
-      permissions: role === 'owner' 
-        ? ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT'] 
-        : ['POS_BILLING', 'STOCK_INWARD']
+      name: role === 'system_admin' 
+        ? 'System Admin (Platform Owner)' 
+        : (role === 'owner' ? 'Rahul Deshmukh (Owner)' : 'Amit Shinde (Employee)'),
+      permissions: role === 'system_admin'
+        ? ['APPROVE_SHOPS', 'MANAGE_SUBSCRIPTIONS']
+        : (role === 'owner' 
+          ? ['ALL', 'DELETE_PRODUCT', 'REPORTS_VIEW', 'SETTINGS_EDIT'] 
+          : ['POS_BILLING', 'STOCK_INWARD'])
     });
     // Log auth audit trail
     const timestamp = new Date().toISOString();
     const newLog: AuditLog = {
       id: 'aud-' + Date.now(),
       timestamp,
-      userId: role === 'owner' ? 'usr-1' : 'usr-2',
-      userName: role === 'owner' ? 'Rahul (Owner)' : 'Amit (Employee)',
+      userId: role === 'system_admin' ? 'system-admin' : (role === 'owner' ? 'usr-1' : 'usr-2'),
+      userName: role === 'system_admin' 
+        ? 'System Admin' 
+        : (role === 'owner' ? 'Rahul (Owner)' : 'Amit (Employee)'),
       action: 'LOGIN_OTP_VERIFIED',
       details: `Successful OTP authentication for role: ${role.toUpperCase()}`
     };
     setAuditLogs(prev => [newLog, ...prev]);
+
+    // Set view accordingly
+    if (role === 'system_admin') {
+      setCurrentView('approvals');
+    } else {
+      setCurrentView('dashboard');
+    }
   };
 
   const handleLogout = () => {
@@ -764,7 +777,8 @@ export default function App() {
   // Navigation menu links mapping
   const menuItems = session?.role === 'system_admin'
     ? [
-        { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी आणि वर्गणी' : 'Licensing & Subscriptions', icon: ShieldCheck }
+        { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी आणि वर्गणी' : 'Licensing & Subscriptions', icon: ShieldCheck },
+        { id: 'admin', label: t.adminPanel, icon: Settings }
       ]
     : [
         { id: 'dashboard', label: t.dashboard, icon: LayoutDashboard },
@@ -773,9 +787,8 @@ export default function App() {
         { id: 'stock', label: isMr ? 'स्टॉक इन-आउट' : 'Stock In & Out', icon: Truck },
         { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
         { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
-        { id: 'approvals', label: isMr ? 'नोंदणी मंजुरी' : 'Licensing & Approvals', icon: ShieldCheck, ownerOnly: true },
         { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
-        { id: 'admin', label: t.adminPanel, icon: Settings },
+        { id: 'admin', label: t.adminPanel, icon: Settings, ownerOnly: true },
         { id: 'code_center', label: t.devCenter, icon: Code },
       ];
 
@@ -1029,17 +1042,49 @@ export default function App() {
               <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block text-left">Fast-Track Live Testing Demo</span>
               
               <div className="grid grid-cols-1 gap-2 text-xs">
-                {/* 1. Primary owner */}
+                {/* 1. Platform Admin (System Admin) */}
+                <button
+                  id="demo-login-system-admin"
+                  onClick={() => fastLogin('system_admin')}
+                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-[#38BDF8] shrink-0" />
+                    <div>
+                      <span className="font-bold text-white/90 block leading-none">{isMr ? 'सिस्टम ॲडमिन (प्रणाली प्रशासक)' : 'Platform System Admin'}</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">{isMr ? 'नवीन दुकानांची नोंदणी मंजूर करा आणि परवाने द्या' : 'Review shops & authorize licensing plans'}</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500" />
+                </button>
+
+                {/* 2. Shop Owner (Shop Admin) */}
                 <button
                   id="demo-login-owner"
                   onClick={() => fastLogin('owner')}
                   className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
                 >
                   <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-indigo-400 shrink-0" />
+                    <ShieldCheck size={16} className="text-emerald-400 shrink-0" />
                     <div>
-                      <span className="font-bold text-white/90 block leading-none">Platform Owner / Admin</span>
-                      <span className="text-[9px] text-slate-400 mt-0.5 block">Review shops & authorize licensing plans</span>
+                      <span className="font-bold text-white/90 block leading-none">{isMr ? 'दुकान मालक (शॉप ॲडमिन)' : 'Shop Owner (Shop Admin)'}</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">{isMr ? 'बिलिंग टर्मिनल, उत्पादने आणि सेटिंग्ज व्यवस्थापित करा' : 'Manage billing, inventory, settings & reports'}</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={14} className="text-slate-500" />
+                </button>
+
+                {/* 3. Shop Employee */}
+                <button
+                  id="demo-login-employee"
+                  onClick={() => fastLogin('employee')}
+                  className="p-2.5 rounded-xl border border-white/10 hover:border-indigo-400 hover:bg-white/5 transition flex items-center justify-between gap-2 text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck size={16} className="text-amber-400 shrink-0" />
+                    <div>
+                      <span className="font-bold text-white/90 block leading-none">{isMr ? 'दुकान कर्मचारी (स्टाफ)' : 'Shop Employee (Billing Staff)'}</span>
+                      <span className="text-[9px] text-slate-400 mt-0.5 block">{isMr ? 'थेट बिलिंग आणि स्टॉक नोंदणी हाताळा' : 'Handle direct POS sales bills and stock check'}</span>
                     </div>
                   </div>
                   <ChevronRight size={14} className="text-slate-500" />
