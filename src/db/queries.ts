@@ -40,9 +40,49 @@ export async function getOrCreateUser(uid: string, email: string, name?: string,
 }
 
 // ---------------- REGISTRATION QUERIES ----------------
+export function mapDbRecordToRegistration(dbRecord: any) {
+  if (!dbRecord) return null;
+  return {
+    id: dbRecord.id,
+    shopName: dbRecord.shopName,
+    ownerName: dbRecord.ownerName,
+    mobile: dbRecord.mobile,
+    email: dbRecord.email,
+    gstNumber: dbRecord.gstNumber || undefined,
+    businessRegNumber: dbRecord.businessRegNumber || undefined,
+    city: dbRecord.city,
+    state: dbRecord.state,
+    pincode: dbRecord.pincode,
+    loginInfo: {
+      username: dbRecord.username,
+      password: dbRecord.password,
+    },
+    shopDetails: {
+      shopType: dbRecord.shopType,
+      employeesCount: Number(dbRecord.employeesCount) || 1,
+      openingDate: dbRecord.openingDate,
+    },
+    documents: {
+      ownerIdProof: dbRecord.ownerIdProof,
+      shopLicense: dbRecord.shopLicense || undefined,
+      gstCertificate: dbRecord.gstCertificate || undefined,
+      shopPhoto: dbRecord.shopPhoto || undefined,
+    },
+    subscription: {
+      status: dbRecord.status,
+      subscriptionType: dbRecord.subscriptionType,
+      startDate: dbRecord.startDate || undefined,
+      endDate: dbRecord.endDate || undefined,
+      notes: dbRecord.notes || undefined,
+    },
+    createdAt: dbRecord.createdAt || undefined,
+  };
+}
+
 export async function getAllRegistrations() {
   try {
-    return await db.select().from(registrations).orderBy(desc(registrations.createdAt));
+    const records = await db.select().from(registrations).orderBy(desc(registrations.createdAt));
+    return records.map(mapDbRecordToRegistration);
   } catch (error) {
     handleDbError('getAllRegistrations', error);
   }
@@ -79,7 +119,7 @@ export async function createRegistration(data: any) {
         createdAt: data.createdAt || new Date().toISOString(),
       })
       .returning();
-    return result[0];
+    return mapDbRecordToRegistration(result[0]);
   } catch (error) {
     handleDbError('createRegistration', error);
   }
@@ -101,7 +141,7 @@ export async function updateRegistrationStatus(id: string, status: string, subsc
       .set(updateValues)
       .where(eq(registrations.id, id))
       .returning();
-    return result[0];
+    return mapDbRecordToRegistration(result[0]);
   } catch (error) {
     handleDbError('updateRegistrationStatus', error);
   }
