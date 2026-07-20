@@ -1,119 +1,119 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Barcode, 
   Search, 
   Plus, 
+  Minus, 
   Trash2, 
-  CreditCard, 
-  Smartphone, 
-  UserPlus, 
   Printer, 
+  MessageSquare, 
   Share2, 
-  CheckCircle, 
-  Percent, 
-  FileText, 
+  UserPlus,
+  Barcode,
   ChevronRight,
-  MessageSquare,
-  AlertCircle
+  AlertCircle,
+  Tag,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  PieChart
 } from 'lucide-react';
-import { Product, Customer, Invoice, InvoiceItem, AppTranslations } from '../types';
+import { Product, InvoiceItem, Invoice, Customer, ShopSettings, AppTranslations } from '../types';
 import { getWhatsAppBillingMessage, openWhatsAppBillingShare } from '../utils/whatsapp';
 
-interface BillingTerminalProps {
+interface BillingTerminalViewProps {
   products: Product[];
   customers: Customer[];
+  onGenerateInvoice: (invoice: Invoice) => void;
+  onAddCustomer: (c: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => void;
+  shopSettings: ShopSettings;
   t: AppTranslations;
   isMr: boolean;
-  onAddCustomer: (customer: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => void;
-  onGenerateInvoice: (invoice: Invoice) => void;
-  shopSettings: any;
 }
 
-export default function BillingTerminalView({
-  products,
-  customers,
-  t,
-  isMr,
+export default function BillingTerminalView({ 
+  products, 
+  customers, 
+  onGenerateInvoice, 
   onAddCustomer,
-  onGenerateInvoice,
-  shopSettings
-}: BillingTerminalProps) {
-  // POS States
-  const [selectedCustomerId, setSelectedCustomerId] = useState(customers[0]?.id || '');
-  const [invoiceType, setInvoiceType] = useState<'GST' | 'Non-GST'>('GST');
+  shopSettings,
+  t,
+  isMr
+}: BillingTerminalViewProps) {
   const [items, setItems] = useState<InvoiceItem[]>([]);
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [couponCode, setCouponCode] = useState('');
-  const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card' | 'Credit' | 'Split'>('Cash');
-  const [splitDetails, setSplitDetails] = useState({ cash: 0, upi: 0, card: 0, credit: 0 });
-
-  // Barcode / manual item adding state
-  const [barcodeSearch, setBarcodeSearch] = useState('');
+  const [invoiceType, setInvoiceType] = useState<'GST' | 'Non-GST'>('GST');
+  
+  // Search & Barcode
   const [searchProductQuery, setSearchProductQuery] = useState('');
   const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [barcodeSearch, setBarcodeSearch] = useState('');
 
-  // Bill creation outcome
-  const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
-  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
-  const [previewTemplate, setPreviewTemplate] = useState<'thermal' | 'a4'>('a4');
-
-  // Customer inline adding state
+  // Customer Selection
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || '');
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
   const [custAddress, setCustAddress] = useState('');
   const [custGst, setCustGst] = useState('');
 
-  // Handle barcode "scanning" click simulation or Enter
+  // Discounts
+  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [couponCode, setCouponCode] = useState('');
+
+  // Payment State
+  const [paymentMode, setPaymentMode] = useState<'Cash' | 'UPI' | 'Card' | 'Credit' | 'Split'>('UPI');
+  const [splitDetails, setSplitDetails] = useState({ cash: 0, upi: 0, card: 0, credit: 0 });
+
+  // Post-generation Preview
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  const [activeInvoice, setActiveInvoice] = useState<Invoice | null>(null);
+
+  // Focus trap for barcode scanner
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Logic for capturing physical barcode scanner rapid typing could go here
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleBarcodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const product = products.find(p => p.barcode === barcodeSearch);
-    if (product) {
-      addItemToInvoice(product);
-      setBarcodeSearch('');
+    if (!barcodeSearch) return;
+    const found = products.find(p => p.id === barcodeSearch || p.itemName.includes(barcodeSearch));
+    if (found) {
+      addItemToInvoice(found);
     } else {
-      alert(isMr ? 'बारकोड सापडला नाही!' : 'Product Barcode Not Found!');
+      alert(isMr ? 'उत्पादन सापडले नाही!' : 'Product not found!');
     }
+    setBarcodeSearch('');
   };
 
-  const addItemToInvoice = (product: Product) => {
-    // Check if item already exists
-    const existingIndex = items.findIndex(item => item.productId === product.id);
-    if (existingIndex > -1) {
+  const addItemToInvoice = (p: Product) => {
+    const existingIndex = items.findIndex(it => it.productId === p.id);
+    if (existingIndex >= 0) {
       const updated = [...items];
       updated[existingIndex].quantity += 1;
       updated[existingIndex].total = updated[existingIndex].quantity * updated[existingIndex].rate;
       setItems(updated);
     } else {
-      const newItem: InvoiceItem = {
-        productId: product.id,
-        itemName: product.itemName,
-        color: product.color,
-        size: product.size,
+      const rate = invoiceType === 'GST' ? p.sellingPrice : p.sellingPrice; // Logic adjustment based on shop policy
+      const gstPercent = invoiceType === 'GST' ? p.gstPercent : 0;
+      setItems([...items, {
+        productId: p.id,
+        itemName: isMr ? p.itemNameMr : p.itemName,
+        size: p.size,
+        color: p.color,
         quantity: 1,
-        rate: product.sellingPrice,
-        gstPercent: invoiceType === 'GST' ? product.gstPercent : 0,
-        hsn: product.hsn,
-        discountAmount: 0,
-        total: product.sellingPrice
-      };
-      setItems([...items, newItem]);
+        rate: rate,
+        gstPercent: gstPercent,
+        total: rate
+      }]);
     }
   };
 
-  const removeItem = (index: number) => {
-    const updated = items.filter((_, i) => i !== index);
-    setItems(updated);
-  };
-
-  const updateQuantity = (index: number, newQty: number) => {
+  const updateItemQty = (index: number, newQty: number) => {
     if (newQty < 1) return;
     const updated = [...items];
     updated[index].quantity = newQty;
@@ -166,9 +166,9 @@ export default function BillingTerminalView({
       id: generatedInvId,
       invoiceNumber: dummyInvNum,
       date: '2026-07-18', // System Date context
-      customerId: currentCustomer.id,
-      customerName: currentCustomer.name,
-      customerMobile: currentCustomer.mobile,
+      customerId: currentCustomer?.id || 'unknown',
+      customerName: currentCustomer?.name || 'Walk-in Customer',
+      customerMobile: currentCustomer?.mobile || '0000000000',
       type: invoiceType,
       items: items,
       subtotal: subtotal,
@@ -185,6 +185,7 @@ export default function BillingTerminalView({
     onGenerateInvoice(newInvoice);
     setActiveInvoice(newInvoice);
     setShowInvoicePreview(true);
+
     // Clear state
     setItems([]);
     setDiscountAmount(0);
@@ -204,32 +205,34 @@ export default function BillingTerminalView({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Interactive Bill Panel (Left 2 columns) */}
-      <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 space-y-5">
-        <div className="flex justify-between items-center pb-3 border-b border-slate-100 flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-            <span className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+      <div className="lg:col-span-2 flex flex-col gap-6">
+        
+        {/* Header Module */}
+        <div className="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-500 rounded-3xl p-6 text-white shadow-xl shadow-fuchsia-200/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-extrabold text-xl shadow-inner">
               POS
-            </span>
+            </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900">{t.newInvoice}</h2>
-              <p className="text-[10px] text-slate-400">Terminal Server #3000</p>
+              <h2 className="text-2xl font-extrabold tracking-tight drop-shadow-md">{t.newInvoice}</h2>
+              <p className="text-sm font-medium text-white/80">Terminal Server #3000</p>
             </div>
           </div>
-
-          <div className="flex gap-2 text-xs">
+          
+          {/* GST Toggles */}
+          <div className="flex bg-white/20 backdrop-blur-md p-1.5 rounded-xl">
             <button 
               id="gst-invoice-toggle"
               onClick={() => {
                 setInvoiceType('GST');
-                // Adjust items' taxes
                 setItems(items.map(it => {
                   const p = products.find(prod => prod.id === it.productId);
                   return { ...it, gstPercent: p?.gstPercent || 5 };
                 }));
               }}
-              className={`px-3 py-1.5 rounded-lg font-bold border transition ${invoiceType === 'GST' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${invoiceType === 'GST' ? 'bg-white text-violet-700 shadow-md transform scale-105' : 'text-white/90 hover:bg-white/10'}`}
             >
               GST Invoice
             </button>
@@ -239,31 +242,33 @@ export default function BillingTerminalView({
                 setInvoiceType('Non-GST');
                 setItems(items.map(it => ({ ...it, gstPercent: 0 })));
               }}
-              className={`px-3 py-1.5 rounded-lg font-bold border transition ${invoiceType === 'Non-GST' ? 'bg-indigo-600 text-white border-indigo-600' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${invoiceType === 'Non-GST' ? 'bg-white text-fuchsia-700 shadow-md transform scale-105' : 'text-white/90 hover:bg-white/10'}`}
             >
               Non GST
             </button>
           </div>
         </div>
 
-        {/* Scan Barcode / Search Clothes Row */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
-          {/* Barcode scan Simulator */}
-          <form onSubmit={handleBarcodeSubmit} className="relative">
-            <Barcode className="absolute left-3 top-2.5 text-slate-400" size={16} />
+        {/* Scan & Search Bar */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100">
+          <form onSubmit={handleBarcodeSubmit} className="relative group">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Barcode className="text-violet-400 group-focus-within:text-violet-600 transition-colors" size={20} />
+            </div>
             <input 
               type="text"
-              placeholder={isMr ? "बारकोड स्कॅन करा आणि एंटर दाबा..." : "Simulate Barcode Scan (e.g. 890100210011)"}
+              placeholder={isMr ? "बारकोड स्कॅन करा आणि एंटर दाबा..." : "Scan Barcode & Press Enter"}
               value={barcodeSearch}
               onChange={(e) => setBarcodeSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-white focus:ring-1 focus:ring-indigo-500 font-mono outline-none"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-transparent focus:border-violet-300 focus:bg-white rounded-2xl text-sm font-bold text-slate-800 placeholder-slate-400 outline-none transition-all shadow-sm"
             />
             <button id="barcode-scan-submit-btn" type="submit" className="hidden"></button>
           </form>
 
-          {/* Search Clothes dropdown click selection */}
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
+          <div className="relative group">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Search className="text-fuchsia-400 group-focus-within:text-fuchsia-600 transition-colors" size={20} />
+            </div>
             <input 
               type="text"
               placeholder={isMr ? "कपड्याचे नाव शोधून निवडा..." : "Search clothes by name / code..."}
@@ -273,13 +278,13 @@ export default function BillingTerminalView({
                 setShowProductDropdown(true);
               }}
               onFocus={() => setShowProductDropdown(true)}
-              className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs bg-white outline-none"
+              className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border-2 border-transparent focus:border-fuchsia-300 focus:bg-white rounded-2xl text-sm font-bold text-slate-800 placeholder-slate-400 outline-none transition-all shadow-sm"
             />
             {showProductDropdown && (
-              <div className="absolute top-10 left-0 right-0 max-h-48 overflow-y-auto bg-white border border-slate-200 rounded-lg shadow-xl z-30 text-xs divide-y divide-slate-100">
-                <div className="p-2 text-slate-400 bg-slate-50 flex justify-between items-center">
-                  <span>{isMr ? 'उत्पादने निवडा' : 'Click to add item to invoice'}</span>
-                  <button id="close-product-dropdown-btn" type="button" onClick={() => setShowProductDropdown(false)} className="text-[10px] hover:text-slate-600">Close</button>
+              <div className="absolute top-14 left-0 right-0 max-h-64 overflow-y-auto bg-white border border-slate-100 rounded-2xl shadow-2xl z-30 divide-y divide-slate-50">
+                <div className="p-3 text-slate-400 bg-slate-50/80 backdrop-blur-sm sticky top-0 flex justify-between items-center text-xs font-bold uppercase tracking-wider">
+                  <span>{isMr ? 'उत्पादने निवडा' : 'Select Product'}</span>
+                  <button id="close-product-dropdown-btn" type="button" onClick={() => setShowProductDropdown(false)} className="hover:text-slate-800 transition-colors">Close</button>
                 </div>
                 {products
                   .filter(p => p.itemName.toLowerCase().includes(searchProductQuery.toLowerCase()) || p.itemNameMr.toLowerCase().includes(searchProductQuery.toLowerCase()))
@@ -292,613 +297,468 @@ export default function BillingTerminalView({
                         setSearchProductQuery('');
                         setShowProductDropdown(false);
                       }}
-                      className="p-2.5 hover:bg-slate-50 cursor-pointer flex justify-between items-center"
+                      className="p-4 hover:bg-fuchsia-50 cursor-pointer flex justify-between items-center group transition-colors"
                     >
                       <div>
-                        <span className="font-semibold text-slate-800">{isMr ? p.itemNameMr : p.itemName}</span>
-                        <div className="text-[10px] text-slate-400 font-mono space-x-1.5">
-                          <span>Size: {p.size}</span>
-                          <span>•</span>
-                          <span>Stock: {p.currentStock} {p.unit}</span>
+                        <span className="font-extrabold text-slate-800 group-hover:text-fuchsia-800 transition-colors">{isMr ? p.itemNameMr : p.itemName}</span>
+                        <div className="text-xs text-slate-500 font-medium mt-1 flex gap-2">
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-md">Size: {p.size}</span>
+                          <span className="bg-slate-100 px-2 py-0.5 rounded-md">Color: {p.color}</span>
                         </div>
                       </div>
-                      <span className="font-bold text-indigo-600">₹{p.sellingPrice}</span>
+                      <div className="text-right">
+                        <span className="font-extrabold text-violet-600 block">₹{p.sellingPrice}</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase">Stock: {p.currentStock}</span>
+                      </div>
                     </div>
-                  ))
-                }
+                  ))}
               </div>
             )}
           </div>
         </div>
 
-        {/* Invoice Itemized Grid Table */}
-        <div className="border border-slate-200 rounded-xl overflow-hidden">
-          <table className="w-full text-left text-xs border-collapse">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 uppercase font-mono border-b border-slate-200 text-[10px]">
-                <th className="py-2.5 px-3 w-8 text-center">#</th>
-                <th className="py-2.5 px-3">{isMr ? 'कपड्याचे नाव/आकार' : 'Garment Name & Size'}</th>
-                <th className="py-2.5 px-3 text-right">{isMr ? 'दर' : 'Rate'}</th>
-                <th className="py-2.5 px-3 text-center">{isMr ? 'नग' : 'Qty'}</th>
-                <th className="py-2.5 px-3 text-right">{isMr ? 'जीएसटी' : 'GST'}</th>
-                <th className="py-2.5 px-3 text-right">{isMr ? 'एकूण' : 'Total'}</th>
-                <th className="py-2.5 px-3 text-center"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {items.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-12 text-center text-slate-400 space-y-2">
-                    <Barcode size={32} className="mx-auto text-slate-300" />
-                    <p className="text-xs">{isMr ? 'बिलिंग यादी रिकामी आहे. बारकोड स्कॅन करा किंवा वरून कपडे जोडा.' : 'Invoice is empty. Scan barcodes or select clothes above.'}</p>
-                  </td>
-                </tr>
-              ) : (
-                items.map((item, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50/40">
-                    <td className="py-3 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="py-3 px-3">
-                      <span className="font-bold text-slate-800">{isMr ? (products.find(p => p.id === item.productId)?.itemNameMr || item.itemName) : item.itemName}</span>
-                      <div className="text-[10px] text-slate-500 space-x-2">
-                        <span>Size: <strong className="text-slate-700">{item.size}</strong></span>
-                        <span>•</span>
-                        <span>Col: {item.color}</span>
-                        {item.hsn && <span>• HSN: {item.hsn}</span>}
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono font-medium">₹{item.rate}</td>
-                    <td className="py-3 px-3 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button 
-                          id={`qty-minus-${idx}`}
-                          onClick={() => updateQuantity(idx, item.quantity - 1)}
-                          className="w-5 h-5 bg-slate-100 hover:bg-slate-200 rounded flex items-center justify-center font-bold text-xs"
-                        >-</button>
-                        <span className="font-mono font-bold w-6 text-center">{item.quantity}</span>
-                        <button 
-                          id={`qty-plus-${idx}`}
-                          onClick={() => updateQuantity(idx, item.quantity + 1)}
-                          className="w-5 h-5 bg-slate-100 hover:bg-slate-200 rounded flex items-center justify-center font-bold text-xs"
-                        >+</button>
-                      </div>
-                    </td>
-                    <td className="py-3 px-3 text-right font-mono text-[10px] text-slate-500">{item.gstPercent}%</td>
-                    <td className="py-3 px-3 text-right font-mono font-bold text-slate-800">₹{item.total.toLocaleString()}</td>
-                    <td className="py-3 px-3 text-center">
-                      <button 
-                        id={`remove-item-${idx}`}
-                        onClick={() => removeItem(idx)}
-                        className="text-slate-300 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 transition"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+        {/* Invoice Items Table */}
+        <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100 overflow-hidden flex-1 flex flex-col">
+          <div className="grid grid-cols-12 gap-2 bg-slate-50 border-b border-slate-100 p-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider items-center">
+            <div className="col-span-1 text-center">#</div>
+            <div className="col-span-4">Garment</div>
+            <div className="col-span-2 text-center">Rate</div>
+            <div className="col-span-3 text-center">Qty</div>
+            <div className="col-span-1 text-center">GST</div>
+            <div className="col-span-1 text-center">Del</div>
+          </div>
+          
+          <div className="divide-y divide-slate-50 flex-1 overflow-y-auto p-2">
+            <AnimatePresence>
+              {items.map((item, index) => (
+                <motion.div 
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-slate-50/80 transition-colors rounded-2xl"
+                >
+                  <div className="col-span-1 text-center text-xs font-extrabold text-slate-400">{index + 1}</div>
+                  
+                  <div className="col-span-4 flex flex-col">
+                    <span className="font-extrabold text-sm text-slate-800">{item.itemName}</span>
+                    <span className="text-[11px] text-slate-500 font-medium mt-0.5">
+                      {item.size} • {item.color}
+                    </span>
+                  </div>
+                  
+                  <div className="col-span-2 text-center font-bold text-sm text-slate-600">
+                    ₹{item.rate}
+                  </div>
+                  
+                  <div className="col-span-3 flex justify-center items-center gap-2">
+                    <button 
+                      onClick={() => updateItemQty(index, item.quantity - 1)}
+                      className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-rose-100 hover:text-rose-600 flex items-center justify-center transition-colors shadow-sm"
+                    >
+                      <Minus size={14} strokeWidth={3} />
+                    </button>
+                    <span className="w-6 text-center font-extrabold text-sm text-slate-900">{item.quantity}</span>
+                    <button 
+                      onClick={() => updateItemQty(index, item.quantity + 1)}
+                      className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-emerald-100 hover:text-emerald-600 flex items-center justify-center transition-colors shadow-sm"
+                    >
+                      <Plus size={14} strokeWidth={3} />
+                    </button>
+                  </div>
+                  
+                  <div className="col-span-1 text-center font-bold text-xs text-slate-500">
+                    {item.gstPercent}%
+                  </div>
+                  
+                  <div className="col-span-1 flex justify-center">
+                    <button 
+                      onClick={() => {
+                        const newItems = [...items];
+                        newItems.splice(index, 1);
+                        setItems(newItems);
+                      }}
+                      className="text-slate-300 hover:text-rose-500 transition-colors p-2 rounded-full hover:bg-rose-50"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+
+            {items.length === 0 && (
+              <div className="p-12 text-center flex flex-col items-center justify-center h-full">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                  <Barcode className="text-slate-300" size={32} />
+                </div>
+                <p className="text-slate-400 font-bold">No garments added to invoice yet.</p>
+                <p className="text-slate-400 text-xs mt-1">Scan a barcode or search above to begin.</p>
+              </div>
+            )}
+          </div>
         </div>
+
       </div>
 
-      {/* Checkout Sidebar Controller Panel (Right 1 column) */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-5 flex flex-col justify-between space-y-6">
-        <div className="space-y-5">
-          {/* Section: Customer Picker */}
-          <div className="space-y-1.5 pb-4 border-b border-slate-100">
-            <div className="flex justify-between items-center">
-              <label className="font-bold text-xs text-slate-800">{t.customerSelect}</label>
-              <button 
-                id="inline-add-customer-btn"
-                onClick={() => setIsAddingCustomer(!isAddingCustomer)}
-                className="text-xs text-indigo-600 hover:text-indigo-500 flex items-center gap-0.5"
-              >
-                <UserPlus size={12} /> {isMr ? 'नवीन जोडा' : 'New Client'}
-              </button>
-            </div>
-
+      {/* Control Panel (Right 1 column) */}
+      <div className="space-y-6">
+        
+        {/* Customer Block */}
+        <div className="bg-white p-6 rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-2">
+              <UserPlus size={18} className="text-emerald-500" />
+              Select Customer
+            </h3>
+            <button 
+              id="toggle-new-customer-btn"
+              onClick={() => setIsAddingCustomer(!isAddingCustomer)}
+              className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1"
+            >
+              {isAddingCustomer ? 'Cancel' : '+ New'}
+            </button>
+          </div>
+          
+          <AnimatePresence mode="wait">
             {isAddingCustomer ? (
-              <motion.div 
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-3 border border-indigo-100 bg-indigo-50/30 rounded-lg space-y-2 mt-2 text-xs"
+              <motion.form 
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                onSubmit={handleAddCustomerInline} 
+                className="space-y-3 overflow-hidden"
               >
                 <input 
-                  type="text" 
-                  placeholder="Name" 
-                  value={custName}
-                  onChange={(e) => setCustName(e.target.value)}
-                  className="w-full p-2 border border-slate-200 rounded bg-white outline-none"
+                  type="text" placeholder={isMr ? "ग्राहकाचे नाव" : "Customer Name"}
+                  value={custName} onChange={e => setCustName(e.target.value)} required
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
                 />
                 <input 
-                  type="text" 
-                  placeholder="Mobile" 
-                  value={custMobile}
-                  onChange={(e) => setCustMobile(e.target.value)}
-                  className="w-full p-2 border border-slate-200 rounded bg-white outline-none"
+                  type="tel" placeholder={isMr ? "मोबाईल नंबर" : "Mobile Number"}
+                  value={custMobile} onChange={e => setCustMobile(e.target.value)} required
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
                 />
                 <input 
-                  type="text" 
-                  placeholder="Address (Optional)" 
-                  value={custAddress}
-                  onChange={(e) => setCustAddress(e.target.value)}
-                  className="w-full p-2 border border-slate-200 rounded bg-white outline-none"
+                  type="text" placeholder={isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
+                  value={custAddress} onChange={e => setCustAddress(e.target.value)}
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
                 />
-                <div className="flex gap-2 pt-1">
-                  <button id="cancel-inline-cust" type="button" onClick={() => setIsAddingCustomer(false)} className="w-1/2 p-1.5 bg-slate-100 rounded hover:bg-slate-200">Cancel</button>
-                  <button id="save-inline-cust" type="button" onClick={handleAddCustomerInline} className="w-1/2 p-1.5 bg-indigo-600 text-white font-bold rounded hover:bg-indigo-500">Save</button>
-                </div>
-              </motion.div>
-            ) : (
-              <select
-                value={selectedCustomerId}
-                onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-lg text-xs bg-white outline-none font-semibold text-slate-700"
-              >
-                {customers.map(c => (
-                  <option key={c.id} value={c.id}>👤 {isMr ? c.nameMr : c.name} ({c.mobile})</option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {/* Section: Discounts / Coupons */}
-          <div className="space-y-3 pb-4 border-b border-slate-100">
-            <h3 className="font-bold text-xs text-slate-800">Discounts & Promos</h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <label className="text-[10px] text-slate-500">Flat Discount (₹)</label>
-                <div className="relative mt-1">
-                  <span className="absolute left-2.5 top-2 text-slate-400">₹</span>
-                  <input 
-                    type="number"
-                    min="0"
-                    max={subtotal}
-                    value={discountAmount || ''}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      setDiscountAmount(val);
-                      setDiscountPercent(subtotal > 0 ? Number(((val / subtotal) * 100).toFixed(1)) : 0);
-                    }}
-                    className="w-full pl-6 pr-2 p-1.5 border border-slate-200 rounded-lg outline-none font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-slate-500">Coupon Code</label>
-                <div className="relative mt-1">
-                  <input 
-                    type="text"
-                    placeholder="e.g. WELCOME10"
-                    value={couponCode}
-                    onChange={(e) => {
-                      const code = e.target.value;
-                      setCouponCode(code);
-                      if (code.toUpperCase() === 'WELCOME10') {
-                        const disc = Math.round(subtotal * 0.1);
-                        setDiscountAmount(disc);
-                        setDiscountPercent(10);
-                      }
-                    }}
-                    className="w-full p-1.5 border border-slate-200 rounded-lg outline-none font-mono uppercase text-[10px]"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Section: Payment Modes selection */}
-          <div className="space-y-3 pb-4 border-b border-slate-100">
-            <h3 className="font-bold text-xs text-slate-800">{t.paymentMode}</h3>
-            <div className="grid grid-cols-5 gap-1.5">
-              {(['Cash', 'UPI', 'Card', 'Credit', 'Split'] as const).map(mode => (
-                <button
-                  key={mode}
-                  id={`paymode-${mode}`}
-                  onClick={() => setPaymentMode(mode)}
-                  className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition text-center ${paymentMode === mode ? 'bg-indigo-50 text-indigo-700 border-indigo-400 shadow-3xs' : 'border-slate-200 hover:bg-slate-50 text-slate-500'}`}
-                >
-                  {mode}
+                <button id="save-new-customer-btn" type="submit" className="w-full p-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-xl transition-colors shadow-md shadow-emerald-500/20">
+                  Save Customer
                 </button>
-              ))}
-            </div>
+              </motion.form>
+            ) : (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+              >
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-extrabold text-slate-700 outline-none focus:border-emerald-400 focus:bg-white transition-colors appearance-none cursor-pointer"
+                >
+                  <option value="" disabled>Select a customer...</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{isMr ? c.nameMr : c.name} • {c.mobile}</option>
+                  ))}
+                </select>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
-            {/* Split Payment Form fields */}
+        {/* Discounts & Promos */}
+        <div className="bg-white p-6 rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100">
+          <h3 className="font-extrabold text-sm text-slate-800 mb-4 flex items-center gap-2">
+            <Tag size={18} className="text-amber-500" />
+            Discounts & Promos
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1.5">Flat Disc (₹)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-3.5 text-slate-400 font-extrabold">₹</span>
+                <input 
+                  type="number"
+                  min="0"
+                  max={subtotal}
+                  value={discountAmount || ''}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setDiscountAmount(val);
+                    setDiscountPercent(subtotal > 0 ? Number(((val / subtotal) * 100).toFixed(1)) : 0);
+                  }}
+                  className="w-full pl-8 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-500 block mb-1.5">Coupon Code</label>
+              <input 
+                type="text"
+                placeholder="PROMO10"
+                value={couponCode}
+                onChange={(e) => {
+                  const code = e.target.value;
+                  setCouponCode(code);
+                  if (code.toUpperCase() === 'WELCOME10') {
+                    const disc = Math.round(subtotal * 0.1);
+                    setDiscountAmount(disc);
+                    setDiscountPercent(10);
+                  }
+                }}
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm uppercase"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Payment Mode */}
+        <div className="bg-white p-6 rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100">
+          <h3 className="font-extrabold text-sm text-slate-800 mb-4 flex items-center gap-2">
+            <CreditCard size={18} className="text-blue-500" />
+            Payment Mode
+          </h3>
+          <div className="grid grid-cols-3 gap-2">
+            {([
+              { mode: 'Cash', icon: Banknote, color: 'emerald' }, 
+              { mode: 'UPI', icon: Smartphone, color: 'blue' }, 
+              { mode: 'Card', icon: CreditCard, color: 'violet' }, 
+              { mode: 'Credit', icon: UserPlus, color: 'rose' }, 
+              { mode: 'Split', icon: PieChart, color: 'fuchsia' }
+            ] as const).map(({ mode, icon: Icon, color }) => (
+              <button
+                key={mode}
+                onClick={() => setPaymentMode(mode as any)}
+                className={`py-3 px-2 rounded-2xl text-xs font-extrabold border-2 transition-all flex flex-col items-center gap-1.5 ${
+                  paymentMode === mode 
+                    ? `bg-${color}-50 text-${color}-600 border-${color}-400 shadow-sm transform scale-105` 
+                    : 'border-slate-100 hover:bg-slate-50 text-slate-400 hover:text-slate-600 hover:border-slate-200'
+                }`}
+              >
+                <Icon size={18} strokeWidth={2.5} />
+                {mode}
+              </button>
+            ))}
+          </div>
+
+          <AnimatePresence>
             {paymentMode === 'Split' && (
               <motion.div 
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2 mt-2 text-[10px]"
+                exit={{ opacity: 0, height: 0 }}
+                className="bg-slate-50 p-4 rounded-2xl border border-slate-200 mt-4 overflow-hidden"
               >
-                <p className="font-semibold text-slate-500 uppercase font-mono text-[9px]">Define Splitting Ratios (Must match total ₹{grandTotal})</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label>Cash Amount (₹)</label>
-                    <input 
-                      type="number" 
-                      value={splitDetails.cash || ''} 
-                      onChange={(e) => setSplitDetails({...splitDetails, cash: Number(e.target.value)})}
-                      className="w-full p-1 border rounded bg-white text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label>UPI Amount (₹)</label>
-                    <input 
-                      type="number" 
-                      value={splitDetails.upi || ''} 
-                      onChange={(e) => setSplitDetails({...splitDetails, upi: Number(e.target.value)})}
-                      className="w-full p-1 border rounded bg-white text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label>Card Amount (₹)</label>
-                    <input 
-                      type="number" 
-                      value={splitDetails.card || ''} 
-                      onChange={(e) => setSplitDetails({...splitDetails, card: Number(e.target.value)})}
-                      className="w-full p-1 border rounded bg-white text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <label>Credit/Ledger (₹)</label>
-                    <input 
-                      type="number" 
-                      value={splitDetails.credit || ''} 
-                      onChange={(e) => setSplitDetails({...splitDetails, credit: Number(e.target.value)})}
-                      className="w-full p-1 border rounded bg-white text-xs font-mono"
-                    />
-                  </div>
+                <p className="font-bold text-slate-500 text-[10px] uppercase tracking-wider mb-3">Define Splitting Ratios</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {['cash', 'upi', 'card', 'credit'].map((k) => (
+                    <div key={k}>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase">{k}</label>
+                      <input 
+                        type="number" 
+                        value={(splitDetails as any)[k] || ''} 
+                        onChange={(e) => setSplitDetails({...splitDetails, [k]: Number(e.target.value)})}
+                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold mt-1 focus:border-fuchsia-400 outline-none transition-colors"
+                      />
+                    </div>
+                  ))}
                 </div>
-
-                {/* Validation line */}
                 {splitDetails.cash + splitDetails.upi + splitDetails.card + splitDetails.credit !== grandTotal && (
-                  <span className="text-[9px] text-rose-600 flex items-center gap-0.5 font-semibold">
-                    <AlertCircle size={10} /> Total is currently ₹{splitDetails.cash + splitDetails.upi + splitDetails.card + splitDetails.credit} (Diff: ₹{grandTotal - (splitDetails.cash + splitDetails.upi + splitDetails.card + splitDetails.credit)})
-                  </span>
+                  <div className="text-[10px] text-rose-500 font-bold flex items-center gap-1 mt-3 bg-rose-50 p-2 rounded-lg">
+                    <AlertCircle size={12} /> Total does not match Grand Total!
+                  </div>
                 )}
               </motion.div>
             )}
-          </div>
+          </AnimatePresence>
+        </div>
 
-          {/* Section: Calculator Breakdown summary */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-2.5 text-xs text-slate-600">
-            <div className="flex justify-between">
-              <span>Items Subtotal:</span>
-              <span className="font-mono font-medium">₹{subtotal.toLocaleString()}</span>
+        {/* Final Summary & Checkout */}
+        <div className="bg-slate-900 text-white p-6 rounded-3xl shadow-2xl shadow-slate-900/30 flex flex-col justify-between relative overflow-hidden">
+          {/* Decorative shapes */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-fuchsia-500/20 rounded-full blur-3xl transform -translate-x-10 translate-y-10"></div>
+          
+          <div className="relative z-10 space-y-3">
+            <div className="flex justify-between items-center text-sm font-semibold text-slate-300">
+              <span>Items Subtotal</span>
+              <span>₹{subtotal.toLocaleString()}</span>
             </div>
             {discountAmount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>Discount Applied:</span>
-                <span className="font-mono font-bold">-₹{discountAmount.toLocaleString()} ({discountPercent}%)</span>
+              <div className="flex justify-between items-center text-sm font-bold text-emerald-400">
+                <span>Discount</span>
+                <span>-₹{discountAmount.toLocaleString()}</span>
               </div>
             )}
             {invoiceType === 'GST' && (
-              <div className="flex justify-between text-slate-500 text-[11px]">
-                <span>GST Tax Component (Incl.):</span>
-                <span className="font-mono">₹{totalTax.toFixed(2)}</span>
+              <div className="flex justify-between items-center text-xs font-medium text-slate-400 border-t border-slate-800 pt-3">
+                <span>Included GST Tax</span>
+                <span>₹{totalTax.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between items-center pt-2.5 border-t border-slate-200 font-bold text-slate-900 text-sm">
-              <span>{t.grandTotal}</span>
-              <span className="font-mono text-base text-indigo-600">₹{grandTotal.toLocaleString()}</span>
+            <div className="flex justify-between items-end pt-4 border-t border-slate-800 mt-2">
+              <span className="font-bold text-slate-400 mb-1">{t.grandTotal}</span>
+              <span className="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-300 to-fuchsia-300">
+                ₹{grandTotal.toLocaleString()}
+              </span>
             </div>
           </div>
+
+          <button
+            id="checkout-pos-btn"
+            onClick={handleCheckout}
+            className="relative z-10 w-full py-4 mt-6 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 transition-all text-white rounded-2xl text-sm font-extrabold shadow-lg shadow-fuchsia-600/30 uppercase tracking-widest transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            Generate Invoice
+          </button>
         </div>
 
-        {/* Generate Invoice primary check out button */}
-        <button
-          id="checkout-pos-btn"
-          onClick={handleCheckout}
-          className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 transition text-white rounded-xl text-xs font-bold shadow-xl shadow-indigo-600/20 uppercase tracking-wider"
-        >
-          Generate & Print Invoice
-        </button>
       </div>
 
-      {/* Invoice Modal Overlay (Receipt + WhatsApp Share dashboard) */}
+      {/* Invoice Modal Overlay */}
       {showInvoicePreview && activeInvoice && (
-        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <motion.div 
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl grid grid-cols-1 md:grid-cols-3 overflow-hidden text-xs text-slate-700"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl flex flex-col md:flex-row overflow-hidden border border-slate-100"
           >
-            {/* Left 2 columns: The Printable Invoice view itself */}
-            <div className="md:col-span-2 p-6 max-h-[85vh] overflow-y-auto bg-slate-50 flex flex-col items-center">
-              {/* Selector to switch print type format */}
-              <div className="flex gap-2 bg-slate-200 p-1 rounded-lg mb-5 w-fit">
-                <button
-                  id="preview-a4-btn"
-                  onClick={() => setPreviewTemplate('a4')}
-                  className={`px-4 py-1.5 rounded-md font-semibold text-[11px] flex items-center gap-1.5 transition ${previewTemplate === 'a4' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-                >
-                  <FileText size={14} />
-                  A4 GST Tax Invoice
-                </button>
-                <button
-                  id="preview-thermal-btn"
-                  onClick={() => setPreviewTemplate('thermal')}
-                  className={`px-4 py-1.5 rounded-md font-semibold text-[11px] flex items-center gap-1.5 transition ${previewTemplate === 'thermal' ? 'bg-white text-slate-800 shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}
-                >
-                  <Printer size={14} />
-                  Thermal Bill (80mm)
-                </button>
+            {/* Left: Receipt Preview */}
+            <div className="w-full md:w-1/2 p-8 bg-slate-50 flex flex-col items-center justify-center relative">
+              <div className="w-[300px] bg-white border-x border-t border-slate-200 shadow-sm font-mono text-[10px] p-6 text-slate-800 leading-relaxed overflow-hidden relative">
+                {/* Jagged edge bottom effect using border-image or pseudo-element conceptually */}
+                <div className="absolute -bottom-2 left-0 right-0 h-4 bg-repeat-x flex items-end"></div>
+                
+                <div className="text-center space-y-1 mb-4">
+                  <h2 className="text-lg font-extrabold uppercase">{shopSettings.shopName}</h2>
+                  <p className="text-slate-500">{shopSettings.address}</p>
+                  {shopSettings.gstNumber && <p className="text-slate-500">GSTIN: {shopSettings.gstNumber}</p>}
+                  <p>=============================</p>
+                </div>
+                
+                <div className="space-y-0.5 text-left text-slate-600 mb-4">
+                  <p><span className="font-bold text-slate-800">Bill No:</span> {activeInvoice.invoiceNumber}</p>
+                  <p><span className="font-bold text-slate-800">Date:</span> {activeInvoice.date}</p>
+                  <p><span className="font-bold text-slate-800">Customer:</span> {activeInvoice.customerName}</p>
+                  <p><span className="font-bold text-slate-800">Mob:</span> +91 {activeInvoice.customerMobile}</p>
+                  <p><span className="font-bold text-slate-800">Type:</span> {activeInvoice.type} RETAIL BILL</p>
+                  <p>=============================</p>
+                </div>
+                
+                <div className="space-y-1 text-left mb-4">
+                  <div className="grid grid-cols-4 font-extrabold uppercase text-[8px] border-b border-slate-300 pb-1 mb-1">
+                    <span className="col-span-2">Item</span>
+                    <span className="text-center">Qty</span>
+                    <span className="text-right">Total</span>
+                  </div>
+                  {activeInvoice.items.map((it, idx) => (
+                    <div key={idx} className="space-y-0.5 py-1">
+                      <div className="grid grid-cols-4">
+                        <span className="col-span-2 font-bold">{it.itemName}</span>
+                        <span className="text-center font-semibold text-slate-600">x{it.quantity}</span>
+                        <span className="text-right font-extrabold">₹{it.total}</span>
+                      </div>
+                      <span className="text-[8px] text-slate-400 block">Rate: ₹{it.rate}</span>
+                    </div>
+                  ))}
+                  <p className="mt-2">=============================</p>
+                </div>
+                
+                <div className="space-y-1.5 text-right font-medium">
+                  <div className="flex justify-between text-slate-600">
+                    <span>Subtotal:</span>
+                    <span>₹{activeInvoice.subtotal}</span>
+                  </div>
+                  {activeInvoice.discount > 0 && (
+                    <div className="flex justify-between text-emerald-600 font-bold">
+                      <span>Discount:</span>
+                      <span>-₹{activeInvoice.discount}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-extrabold text-sm border-t-2 border-slate-300 pt-2 text-slate-900 mt-2">
+                    <span>GRAND TOTAL:</span>
+                    <span>₹{activeInvoice.grandTotal}</span>
+                  </div>
+                  <p className="pt-2">=============================</p>
+                </div>
+                
+                <div className="text-center space-y-1 mt-4 text-slate-500 pb-2">
+                  <p className="font-extrabold text-slate-800 uppercase text-[9px] tracking-wider">Thank you, visit again!</p>
+                  <p className="text-[8px]">Powered by Vastraa Cloud</p>
+                </div>
               </div>
-
-              {/* Template Render: 1. A4 Full GST Invoice */}
-              {previewTemplate === 'a4' ? (
-                <div className="bg-white p-8 w-full max-w-2xl border border-slate-200 rounded-lg shadow-sm font-sans space-y-6 text-slate-800">
-                  {/* Company Header */}
-                  <div className="flex justify-between items-start border-b border-slate-200 pb-4">
-                    <div className="space-y-1">
-                      <h2 className="text-lg font-bold text-indigo-950 tracking-tight leading-none uppercase">{shopSettings.shopName}</h2>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-widest font-mono">Premium Fashion Emporium</span>
-                      <p className="text-[10px] text-slate-500 leading-relaxed max-w-xs">{shopSettings.address}</p>
-                      <p className="text-[10px] text-slate-500">Mob: {shopSettings.mobile} | WhatsApp: {shopSettings.whatsapp}</p>
-                    </div>
-                    <div className="text-right space-y-1 bg-indigo-50 border border-indigo-100/60 p-2.5 rounded-lg">
-                      <h4 className="text-indigo-900 font-bold tracking-tight text-xs uppercase">{activeInvoice.type} TAX INVOICE</h4>
-                      <p className="text-[9px] font-mono font-semibold text-slate-600">GSTIN: {shopSettings.gstNumber}</p>
-                    </div>
-                  </div>
-
-                  {/* Customer Details & Invoice identifiers */}
-                  <div className="grid grid-cols-2 gap-4 text-[10px]">
-                    <div className="space-y-1">
-                      <h4 className="font-bold text-slate-500 uppercase tracking-wider font-mono">Bill To Customer:</h4>
-                      <p className="text-xs font-bold text-slate-900">{activeInvoice.customerName}</p>
-                      <p className="text-slate-500">Contact: +91 {activeInvoice.customerMobile}</p>
-                      {customers.find(c => c.id === activeInvoice.customerId)?.address && (
-                        <p className="text-slate-400">Address: {customers.find(c => c.id === activeInvoice.customerId)?.address}</p>
-                      )}
-                      {customers.find(c => c.id === activeInvoice.customerId)?.gstNumber && (
-                        <p className="text-indigo-600 font-mono font-semibold">GSTIN: {customers.find(c => c.id === activeInvoice.customerId)?.gstNumber}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-1 text-right">
-                      <h4 className="font-bold text-slate-500 uppercase tracking-wider font-mono">Invoice Credentials:</h4>
-                      <p className="text-slate-600">Invoice ID: <strong className="font-mono text-slate-900">{activeInvoice.invoiceNumber}</strong></p>
-                      <p className="text-slate-600">Bill Date: <strong className="font-mono text-slate-900">{activeInvoice.date}</strong></p>
-                      <p className="text-slate-600">Payment Mode: <strong className="font-mono text-slate-900">{activeInvoice.paymentMode}</strong></p>
-                      <p className="text-slate-600">Status: <span className="text-emerald-600 font-bold">{activeInvoice.status}</span></p>
-                    </div>
-                  </div>
-
-                  {/* Items list mapping table */}
-                  <table className="w-full text-left text-[10px] border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50 text-slate-500 uppercase font-mono border-y border-slate-200">
-                        <th className="py-2 px-1 text-center">#</th>
-                        <th className="py-2 px-2">Garment Description</th>
-                        <th className="py-2 px-1 font-mono text-center">HSN</th>
-                        <th className="py-2 px-1 text-right font-mono">Rate (₹)</th>
-                        <th className="py-2 px-1 text-center">Qty</th>
-                        <th className="py-2 px-1 text-right font-mono">GST</th>
-                        <th className="py-2 px-1 text-right font-mono">Total (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {activeInvoice.items.map((it, i) => (
-                        <tr key={i} className="text-slate-700">
-                          <td className="py-2.5 px-1 text-center font-mono">{i + 1}</td>
-                          <td className="py-2.5 px-2 font-semibold">
-                            {it.itemName}
-                            <span className="text-[9px] text-slate-400 font-normal block">Size: {it.size} | Color: {it.color}</span>
-                          </td>
-                          <td className="py-2.5 px-1 text-center font-mono text-slate-500">{it.hsn || '-'}</td>
-                          <td className="py-2.5 px-1 text-right font-mono">₹{it.rate}</td>
-                          <td className="py-2.5 px-1 text-center font-mono font-semibold">{it.quantity}</td>
-                          <td className="py-2.5 px-1 text-right font-mono text-slate-500">{it.gstPercent}%</td>
-                          <td className="py-2.5 px-1 text-right font-mono font-bold">₹{it.total}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-
-                  {/* Calculations subtable summaries */}
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-200 text-[10px]">
-                    <div className="space-y-1 leading-relaxed text-slate-400">
-                      <p className="font-bold text-slate-500 uppercase tracking-wide">Terms & Conditions:</p>
-                      <p>1. Goods once sold will not be returned, only exchanged within 7 days.</p>
-                      <p>2. Subject to Pune jurisdiction only.</p>
-                      <p>3. Dynamic warranty claims apply to premium fabrics only.</p>
-                    </div>
-
-                    <div className="space-y-1.5 font-sans">
-                      <div className="flex justify-between text-slate-500">
-                        <span>Items Subtotal:</span>
-                        <span className="font-mono font-medium">₹{activeInvoice.subtotal.toLocaleString()}</span>
-                      </div>
-                      {activeInvoice.discount > 0 && (
-                        <div className="flex justify-between text-emerald-600 font-semibold">
-                          <span>Less Discount:</span>
-                          <span className="font-mono">-₹{activeInvoice.discount.toLocaleString()}</span>
-                        </div>
-                      )}
-                      {activeInvoice.type === 'GST' && (
-                        <div className="flex justify-between text-slate-400 text-[9px]">
-                          <span>GST Tax Component (Incl.):</span>
-                          <span className="font-mono">₹{activeInvoice.taxAmount}</span>
-                        </div>
-                      )}
-                      <div className="flex justify-between font-bold text-slate-900 border-t border-slate-100 pt-1.5 text-xs">
-                        <span>Invoice Total:</span>
-                        <span className="font-mono text-indigo-700">₹{activeInvoice.grandTotal.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* A4 signing and validation seals */}
-                  <div className="flex justify-between items-end pt-8 text-[9px] text-slate-400">
-                    <div className="space-y-1 text-center">
-                      <div className="w-24 border-b border-slate-200 mx-auto h-8"></div>
-                      <p>Customer Signature</p>
-                    </div>
-                    <div className="space-y-1 text-center font-semibold text-slate-600">
-                      <p>For {shopSettings.shopName}</p>
-                      <div className="w-24 h-8 bg-indigo-50/50 border border-indigo-100 rounded flex items-center justify-center italic text-indigo-600 text-[8px] font-mono">SEAL & SIGN</div>
-                      <p>Authorized Representative</p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                /* Template Render: 2. Thermal Receipt */
-                <div className="bg-white p-4 w-[280px] border border-slate-200 rounded-lg shadow-sm font-mono text-[9px] text-slate-800 space-y-3">
-                  {/* Store Header */}
-                  <div className="text-center space-y-1">
-                    <h3 className="font-bold text-xs leading-none uppercase">{shopSettings.shopName}</h3>
-                    <p className="text-[8px] leading-tight text-slate-500">{shopSettings.address}</p>
-                    <p className="text-[8px] text-slate-500">Mobile: {shopSettings.mobile}</p>
-                    <p className="text-[8px]">=============================</p>
-                  </div>
-
-                  {/* Invoice Header details */}
-                  <div className="space-y-0.5 text-left text-slate-600">
-                    <p>Bill No: {activeInvoice.invoiceNumber}</p>
-                    <p>Date: {activeInvoice.date} 13:17</p>
-                    <p>Customer: {activeInvoice.customerName}</p>
-                    <p>Mob: +91 {activeInvoice.customerMobile}</p>
-                    <p>Type: {activeInvoice.type} RETAIL BILL</p>
-                    <p>=============================</p>
-                  </div>
-
-                  {/* Thermal Items Mapping */}
-                  <div className="space-y-1 text-left text-slate-700">
-                    <div className="grid grid-cols-4 font-bold uppercase text-[8px]">
-                      <span className="col-span-2">Item description</span>
-                      <span className="text-center">Qty</span>
-                      <span className="text-right">Total</span>
-                    </div>
-                    <p>-----------------------------</p>
-                    {activeInvoice.items.map((it, idx) => (
-                      <div key={idx} className="space-y-0.5">
-                        <div className="grid grid-cols-4">
-                          <span className="col-span-2 font-bold">{it.itemName}</span>
-                          <span className="text-center font-semibold">x{it.quantity}</span>
-                          <span className="text-right font-bold">₹{it.total}</span>
-                        </div>
-                        <span className="text-[8px] text-slate-500 block">Size: {it.size} | Rate: ₹{it.rate}</span>
-                      </div>
-                    ))}
-                    <p>=============================</p>
-                  </div>
-
-                  {/* Summary Calculations */}
-                  <div className="space-y-1 text-right">
-                    <div className="flex justify-between">
-                      <span>Subtotal:</span>
-                      <span>₹{activeInvoice.subtotal}</span>
-                    </div>
-                    {activeInvoice.discount > 0 && (
-                      <div className="flex justify-between text-emerald-600 font-bold">
-                        <span>Discount:</span>
-                        <span>-₹{activeInvoice.discount}</span>
-                      </div>
-                    )}
-                    <div className="flex justify-between font-bold text-xs border-t border-dashed border-slate-300 pt-1 text-slate-900">
-                      <span>GRAND TOTAL:</span>
-                      <span>₹{activeInvoice.grandTotal}</span>
-                    </div>
-                    <p>=============================</p>
-                  </div>
-
-                  {/* Footer Message */}
-                  <div className="text-center space-y-1 leading-tight text-slate-500">
-                    <p className="font-bold text-[8px]">THANK YOU - VISIT AGAIN!</p>
-                    <p>Vastraa Cloud Sync Connected</p>
-                  </div>
-                </div>
-              )}
             </div>
 
-            {/* Right 1 column: Share dashboard (WhatsApp PDF generators, Order Summaries, reminders) */}
-            <div className="p-6 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Share2 className="text-emerald-500" size={18} />
-                  <h3 className="font-bold text-slate-900 font-sans">WhatsApp Billing Terminal</h3>
-                </div>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Send PDF copies, daily reminders, and order confirmations with one click! Automatically generates pre-formatted Marathi/English templates using secure WhatsApp web client.
-                </p>
-
-                {/* Simulated URL text bubble */}
-                <div className="bg-emerald-50 border border-emerald-100 p-3 rounded-xl space-y-1 text-emerald-950 font-mono text-[10px]">
-                  <span className="font-bold uppercase tracking-wider block text-[8px] text-emerald-700">Constructed WhatsApp Template:</span>
-                  <p className="italic font-sans">"{getWhatsAppMessage('invoice')}"</p>
+            {/* Right: Actions */}
+            <div className="w-full md:w-1/2 p-8 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col justify-between bg-white">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="font-extrabold text-xl text-slate-900 flex items-center gap-3">
+                    <Share2 className="text-violet-500" size={24} />
+                    Digital Delivery
+                  </h3>
+                  <p className="text-sm text-slate-500 font-medium mt-2 leading-relaxed">
+                    Send secure PDF copies, itemized order summaries, and payment reminders instantly via WhatsApp.
+                  </p>
                 </div>
 
-                {/* Templates checklist selections */}
-                <div className="space-y-2.5 pt-2">
+                <div className="bg-slate-50 border border-slate-100 p-4 rounded-2xl">
+                  <span className="font-bold uppercase tracking-wider block text-[10px] text-slate-400 mb-2">Message Preview</span>
+                  <p className="italic font-medium text-xs text-slate-700 line-clamp-3">"{getWhatsAppMessage('invoice')}"</p>
+                </div>
+
+                <div className="space-y-3">
                   <button
-                    id="wa-send-pdf-btn"
                     onClick={() => handleWhatsAppSend('invoice')}
-                    className="w-full flex items-center justify-between p-3 border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 rounded-xl transition text-left"
+                    className="w-full flex items-center justify-between p-4 border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:shadow-lg hover:shadow-emerald-100 rounded-2xl transition-all group"
                   >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={14} className="text-emerald-600" />
-                      <div>
-                        <span className="font-bold block text-slate-800">Send Invoice PDF</span>
-                        <span className="text-[10px] text-slate-400">Share secure dynamic link</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <MessageSquare size={18} />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-extrabold block text-slate-800 text-sm">Send PDF Receipt</span>
+                        <span className="text-[11px] font-semibold text-slate-400">Share dynamic secure link</span>
                       </div>
                     </div>
-                    <ChevronRight size={14} className="text-slate-400" />
+                    <ChevronRight size={18} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
                   </button>
-
+                  
                   <button
-                    id="wa-send-summary-btn"
                     onClick={() => handleWhatsAppSend('summary')}
-                    className="w-full flex items-center justify-between p-3 border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 rounded-xl transition text-left"
+                    className="w-full flex items-center justify-between p-4 border border-slate-200 hover:border-violet-400 hover:bg-violet-50 hover:shadow-lg hover:shadow-violet-100 rounded-2xl transition-all group"
                   >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={14} className="text-emerald-600" />
-                      <div>
-                        <span className="font-bold block text-slate-800">Send Order Summary</span>
-                        <span className="text-[10px] text-slate-400">Simple itemized checkout log</span>
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                        <MessageSquare size={18} />
+                      </div>
+                      <div className="text-left">
+                        <span className="font-extrabold block text-slate-800 text-sm">Send Text Summary</span>
+                        <span className="text-[11px] font-semibold text-slate-400">Simple itemized log</span>
                       </div>
                     </div>
-                    <ChevronRight size={14} className="text-slate-400" />
-                  </button>
-
-                  <button
-                    id="wa-send-reminder-btn"
-                    onClick={() => handleWhatsAppSend('reminder')}
-                    className="w-full flex items-center justify-between p-3 border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50/20 rounded-xl transition text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <MessageSquare size={14} className="text-emerald-600" />
-                      <div>
-                        <span className="font-bold block text-slate-800">Payment Reminder</span>
-                        <span className="text-[10px] text-slate-400">Friendly credit outstanding alert</span>
-                      </div>
-                    </div>
-                    <ChevronRight size={14} className="text-slate-400" />
+                    <ChevronRight size={18} className="text-slate-300 group-hover:text-violet-500 transition-colors" />
                   </button>
                 </div>
               </div>
 
-              {/* PDF download, print triggers and close modal */}
-              <div className="space-y-2 pt-4 border-t border-slate-100">
+              <div className="space-y-3 mt-8 pt-6 border-t border-slate-100">
                 <button
-                  id="print-invoice-btn"
-                  onClick={() => {
-                    alert(isMr ? 'प्रिंट आदेश यशस्वीरित्या पाठवला!' : 'Invoice printed successfully!');
-                  }}
-                  className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center justify-center gap-2"
+                  onClick={() => alert(isMr ? 'प्रिंट आदेश यशस्वीरित्या पाठवला!' : 'Invoice printed successfully!')}
+                  className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-extrabold text-sm flex items-center justify-center gap-3 shadow-lg shadow-slate-900/20 transition-colors"
                 >
-                  <Printer size={14} />
-                  Print Invoice
+                  <Printer size={18} />
+                  Print Physical Receipt
                 </button>
-
                 <button
-                  id="close-invoice-preview-btn"
                   onClick={() => {
                     setShowInvoicePreview(false);
                     setActiveInvoice(null);
                   }}
-                  className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl font-semibold text-center"
+                  className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-extrabold text-sm transition-colors"
                 >
                   Close & New Transaction
                 </button>
