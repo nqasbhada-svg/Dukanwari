@@ -598,7 +598,7 @@ export default function App() {
   };
 
   // Update registration status handler (Admin/Software Owner Workflow)
-  const handleUpdateRegistrationStatus = (
+  const handleUpdateRegistrationStatus = async (
     id: string, 
     status: 'Pending' | 'Active' | 'Rejected' | 'MoreInfoNeeded',
     subscriptionUpdate?: {
@@ -645,6 +645,34 @@ export default function App() {
       if (freshReg) {
         setPendingSession(freshReg);
       }
+    }
+
+    // Persist registration status update directly to backend Cloud SQL database via PUT endpoint
+    try {
+      const payload = {
+        status,
+        subscription: {
+          subscriptionType: subscriptionUpdate?.subscriptionType || targetReg?.subscription?.subscriptionType,
+          startDate: subscriptionUpdate?.startDate || targetReg?.subscription?.startDate,
+          endDate: subscriptionUpdate?.endDate || targetReg?.subscription?.endDate
+        },
+        notes: notes || targetReg?.subscription?.notes
+      };
+
+      const res = await fetch(`/api/registrations/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error(`Server returned status code ${res.status}`);
+      }
+      console.log(`Successfully synced activation status for registration ${id} on the backend.`);
+    } catch (error) {
+      console.error('Failed to sync registration status update to Cloud SQL:', error);
     }
   };
 
