@@ -109,14 +109,38 @@ export default function App() {
   const [pendingSession, setPendingSession] = useState<ShopRegistration | null>(null);
 
   // Primary Business Collections (Reactive States simulating Cloud DB updates)
-  const [products, setProducts] = useState<Product[]>(initialProducts);
-  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
-  const [suppliers, setSuppliers] = useState<Supplier[]>(initialSuppliers);
-  const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
-  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseBill[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(initialAuditLogs);
-  const [shopSettings, setShopSettings] = useState<ShopSettings>(defaultSettings);
+  const [products, setProducts] = useState<Product[]>(() => {
+    const stored = localStorage.getItem('vastraa_products');
+    return stored ? JSON.parse(stored) : initialProducts;
+  });
+  const [customers, setCustomers] = useState<Customer[]>(() => {
+    const stored = localStorage.getItem('vastraa_customers');
+    return stored ? JSON.parse(stored) : initialCustomers;
+  });
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => {
+    const stored = localStorage.getItem('vastraa_suppliers');
+    return stored ? JSON.parse(stored) : initialSuppliers;
+  });
+  const [invoices, setInvoices] = useState<Invoice[]>(() => {
+    const stored = localStorage.getItem('vastraa_invoices');
+    return stored ? JSON.parse(stored) : initialInvoices;
+  });
+  const [purchaseHistory, setPurchaseHistory] = useState<PurchaseBill[]>(() => {
+    const stored = localStorage.getItem('vastraa_purchaseHistory');
+    return stored ? JSON.parse(stored) : [];
+  });
+  const [expenses, setExpenses] = useState<Expense[]>(() => {
+    const stored = localStorage.getItem('vastraa_expenses');
+    return stored ? JSON.parse(stored) : initialExpenses;
+  });
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>(() => {
+    const stored = localStorage.getItem('vastraa_auditLogs');
+    return stored ? JSON.parse(stored) : initialAuditLogs;
+  });
+  const [shopSettings, setShopSettings] = useState<ShopSettings>(() => {
+    const stored = localStorage.getItem('vastraa_shopSettings');
+    return stored ? JSON.parse(stored) : defaultSettings;
+  });
 
   const [categories, setCategories] = useState<Category[]>(() => {
     const stored = localStorage.getItem('vastraa_categories');
@@ -126,6 +150,39 @@ export default function App() {
     const stored = localStorage.getItem('vastraa_brands');
     return stored ? JSON.parse(stored) : initialBrands;
   });
+
+  // Keep localStorage in sync with changes in state
+  useEffect(() => {
+    localStorage.setItem('vastraa_products', JSON.stringify(products));
+  }, [products]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_customers', JSON.stringify(customers));
+  }, [customers]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_suppliers', JSON.stringify(suppliers));
+  }, [suppliers]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_invoices', JSON.stringify(invoices));
+  }, [invoices]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_purchaseHistory', JSON.stringify(purchaseHistory));
+  }, [purchaseHistory]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_expenses', JSON.stringify(expenses));
+  }, [expenses]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_auditLogs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
+
+  useEffect(() => {
+    localStorage.setItem('vastraa_shopSettings', JSON.stringify(shopSettings));
+  }, [shopSettings]);
 
   const handleAddCategory = (newCat: Category) => {
     setCategories(prev => {
