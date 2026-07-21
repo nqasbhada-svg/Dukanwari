@@ -480,7 +480,7 @@ export default function CustomerSupplierView({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Anand Sarees Pune"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 bg-white text-slate-800"
                 />
               </div>
 
@@ -492,7 +492,7 @@ export default function CustomerSupplierView({
                   value={mobile}
                   onChange={(e) => setMobile(e.target.value)}
                   placeholder="10-digit phone number"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 bg-white text-slate-800"
                 />
               </div>
 
@@ -503,7 +503,7 @@ export default function CustomerSupplierView({
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="Address details"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                 />
               </div>
 
@@ -514,7 +514,7 @@ export default function CustomerSupplierView({
                   value={gst}
                   onChange={(e) => setGst(e.target.value)}
                   placeholder="27AAAAA0000A1Z1"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase bg-white text-slate-800"
                 />
               </div>
 
@@ -525,7 +525,7 @@ export default function CustomerSupplierView({
                     type="number"
                     value={creditLimit}
                     onChange={(e) => setCreditLimit(Number(e.target.value))}
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-indigo-600"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-indigo-600 bg-white"
                   />
                 </div>
               ) : (
@@ -536,7 +536,7 @@ export default function CustomerSupplierView({
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="sales@vendor.com"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
               )}
@@ -580,7 +580,7 @@ export default function CustomerSupplierView({
                   value={txAmount || ''}
                   onChange={(e) => setTxAmount(Number(e.target.value))}
                   placeholder="₹ Cash / UPI settled"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-base text-emerald-600"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-base text-emerald-600 bg-white"
                 />
               </div>
 
@@ -609,7 +609,7 @@ export default function CustomerSupplierView({
                   value={txRef}
                   onChange={(e) => setTxRef(e.target.value)}
                   placeholder="e.g. UPI-TXN-99210088A"
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase bg-white text-slate-800"
                 />
               </div>
 

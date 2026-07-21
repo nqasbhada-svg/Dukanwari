@@ -453,7 +453,7 @@ export default function ProductManagementView({
                     value={itemName}
                     onChange={(e) => setItemName(e.target.value)}
                     placeholder="e.g. Premium Linen White Shirt"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">
@@ -464,7 +464,7 @@ export default function ProductManagementView({
                     value={itemNameMr}
                     onChange={(e) => setItemNameMr(e.target.value)}
                     placeholder="उदा. प्रीमियम लिनेन पांढरा शर्ट"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 bg-white text-slate-800"
                   />
                 </div>
               </div>
@@ -494,7 +494,7 @@ export default function ProductManagementView({
                             placeholder="e.g. Shirts"
                             value={newCatName}
                             onChange={(e) => setNewCatName(e.target.value)}
-                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none text-slate-800"
                           />
                         </div>
                         <div>
@@ -505,7 +505,7 @@ export default function ProductManagementView({
                             placeholder="उदा. शर्ट्स"
                             value={newCatNameMr}
                             onChange={(e) => setNewCatNameMr(e.target.value)}
-                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                            className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none text-slate-800"
                           />
                         </div>
                       </div>
@@ -552,7 +552,7 @@ export default function ProductManagementView({
                           placeholder="e.g. Raymond"
                           value={newBrandName}
                           onChange={(e) => setNewBrandName(e.target.value)}
-                          className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none"
+                          className="w-full p-1.5 border border-slate-200 rounded text-xs bg-white focus:border-indigo-500 outline-none text-slate-800"
                         />
                       </div>
                       <button
@@ -587,7 +587,7 @@ export default function ProductManagementView({
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="e.g. White / Pink"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">
@@ -598,7 +598,7 @@ export default function ProductManagementView({
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
                     placeholder="e.g. L / 32 / XL"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">
@@ -624,7 +624,7 @@ export default function ProductManagementView({
                     value={hsn}
                     onChange={(e) => setHsn(e.target.value)}
                     placeholder="e.g. 610510"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1 col-span-2">
@@ -638,7 +638,7 @@ export default function ProductManagementView({
                       setQrCode('QR_' + e.target.value);
                     }}
                     placeholder="Barcode string"
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-slate-50 font-mono font-bold text-slate-700"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-slate-50 font-mono font-bold text-slate-800"
                   />
                 </div>
               </div>
@@ -694,7 +694,7 @@ export default function ProductManagementView({
                     min="0"
                     value={editingProduct ? minStock : openingStock}
                     onChange={(e) => editingProduct ? setMinStock(Number(e.target.value)) : setOpeningStock(Number(e.target.value))}
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">
@@ -705,7 +705,7 @@ export default function ProductManagementView({
                     min="1"
                     value={minStock}
                     onChange={(e) => setMinStock(Number(e.target.value))}
-                    className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                    className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
                   />
                 </div>
                 <div className="space-y-1">

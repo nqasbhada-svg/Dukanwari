@@ -433,17 +433,17 @@ export default function BillingTerminalView({
                 <input 
                   type="text" placeholder={isMr ? "ग्राहकाचे नाव" : "Customer Name"}
                   value={custName} onChange={e => setCustName(e.target.value)} required
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
                 />
                 <input 
                   type="tel" placeholder={isMr ? "मोबाईल नंबर" : "Mobile Number"}
                   value={custMobile} onChange={e => setCustMobile(e.target.value)} required
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
                 />
                 <input 
                   type="text" placeholder={isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
                   value={custAddress} onChange={e => setCustAddress(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors"
+                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
                 />
                 <button id="save-new-customer-btn" type="submit" className="w-full p-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-xl transition-colors shadow-md shadow-emerald-500/20">
                   Save Customer
@@ -491,7 +491,7 @@ export default function BillingTerminalView({
                     setDiscountAmount(val);
                     setDiscountPercent(subtotal > 0 ? Number(((val / subtotal) * 100).toFixed(1)) : 0);
                   }}
-                  className="w-full pl-8 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm"
+                  className="w-full pl-8 pr-3 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm text-slate-800"
                 />
               </div>
             </div>
@@ -510,7 +510,7 @@ export default function BillingTerminalView({
                     setDiscountPercent(10);
                   }
                 }}
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm uppercase"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-amber-400 focus:bg-white transition-colors font-bold text-sm uppercase text-slate-800"
               />
             </div>
           </div>
@@ -562,7 +562,7 @@ export default function BillingTerminalView({
                         type="number" 
                         value={(splitDetails as any)[k] || ''} 
                         onChange={(e) => setSplitDetails({...splitDetails, [k]: Number(e.target.value)})}
-                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold mt-1 focus:border-fuchsia-400 outline-none transition-colors"
+                        className="w-full p-2 bg-white border border-slate-200 rounded-lg text-xs font-bold mt-1 focus:border-fuchsia-400 outline-none transition-colors text-slate-800"
                       />
                     </div>
                   ))}

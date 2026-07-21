@@ -169,7 +169,7 @@ export default function StockInOutView({
                     value={billNumber}
                     onChange={(e) => setBillNumber(e.target.value)}
                     placeholder="e.g. PUR-2026-981"
-                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 font-mono uppercase"
+                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg outline-none focus:border-indigo-500 font-mono uppercase bg-white text-slate-800"
                   />
                 </div>
               </div>
@@ -183,7 +183,7 @@ export default function StockInOutView({
                     required
                     value={purchaseDate}
                     onChange={(e) => setPurchaseDate(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg outline-none font-mono"
+                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg outline-none font-mono bg-white text-slate-800"
                   />
                 </div>
               </div>
@@ -225,7 +225,7 @@ export default function StockInOutView({
                   min="1"
                   value={purchaseQty}
                   onChange={(e) => setPurchaseQty(Number(e.target.value))}
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold bg-white text-slate-800"
                 />
               </div>
 
@@ -237,7 +237,7 @@ export default function StockInOutView({
                   min="1"
                   value={purchaseRate}
                   onChange={(e) => setPurchaseRate(Number(e.target.value))}
-                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-indigo-600"
+                  className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono font-bold text-indigo-600 bg-white"
                 />
               </div>
 
@@ -316,7 +316,7 @@ export default function StockInOutView({
                 value={returnInvoiceNo}
                 onChange={(e) => setReturnInvoiceNo(e.target.value)}
                 placeholder="e.g. INV-2026-002"
-                className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase"
+                className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono uppercase bg-white text-slate-800"
               />
             </div>
 
@@ -341,7 +341,7 @@ export default function StockInOutView({
                 min="1"
                 value={returnQty}
                 onChange={(e) => setReturnQty(Number(e.target.value))}
-                className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono"
+                className="w-full p-2 border border-slate-200 rounded-lg outline-none font-mono bg-white text-slate-800"
               />
             </div>
 
@@ -376,7 +376,7 @@ export default function StockInOutView({
                 value={returnReason}
                 onChange={(e) => setReturnReason(e.target.value)}
                 placeholder="e.g. Size mis-fit, color mismatch, minor defect"
-                className="w-full p-2 border border-slate-200 rounded-lg outline-none"
+                className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800"
               />
             </div>
 
