@@ -26,7 +26,7 @@ interface BillingTerminalViewProps {
   products: Product[];
   customers: Customer[];
   onGenerateInvoice: (invoice: Invoice) => void;
-  onAddCustomer: (c: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => void;
+  onAddCustomer: (c: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => any;
   shopSettings: ShopSettings;
   t: AppTranslations;
   isMr: boolean;
@@ -56,6 +56,10 @@ export default function BillingTerminalView({
   const [custMobile, setCustMobile] = useState('');
   const [custAddress, setCustAddress] = useState('');
   const [custGst, setCustGst] = useState('');
+
+  const matchedCustomer = custMobile.trim().length >= 3
+    ? customers.find(c => c.mobile.replace(/\s+/g, '').includes(custMobile.trim()))
+    : null;
 
   // Discounts
   const [discountAmount, setDiscountAmount] = useState<number>(0);
@@ -122,10 +126,23 @@ export default function BillingTerminalView({
     setItems(updated);
   };
 
-  const handleAddCustomerInline = (e: React.FormEvent) => {
+  const handleAddCustomerInline = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!custName || !custMobile) return;
-    onAddCustomer({
+
+    // Direct check if matching customer by mobile number already exists (exact match)
+    const existing = customers.find(c => c.mobile.replace(/\s+/g, '') === custMobile.trim());
+    if (existing) {
+      setSelectedCustomerId(existing.id);
+      setCustName('');
+      setCustMobile('');
+      setCustAddress('');
+      setCustGst('');
+      setIsAddingCustomer(false);
+      return;
+    }
+
+    const newCustomer = await onAddCustomer({
       name: custName,
       nameMr: custName,
       mobile: custMobile,
@@ -134,6 +151,10 @@ export default function BillingTerminalView({
       gstNumber: custGst,
       creditLimit: 20000
     });
+
+    if (newCustomer && newCustomer.id) {
+      setSelectedCustomerId(newCustomer.id);
+    }
     setCustName('');
     setCustMobile('');
     setCustAddress('');
@@ -440,6 +461,38 @@ export default function BillingTerminalView({
                   value={custMobile} onChange={e => setCustMobile(e.target.value)} required
                   className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
                 />
+                
+                {matchedCustomer && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-800"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-amber-900 font-extrabold flex items-center gap-1">
+                        <AlertCircle size={14} className="text-amber-600" />
+                        {isMr ? "आधीच नोंदणीकृत ग्राहक आढळला!" : "Existing Customer Found!"}
+                      </p>
+                      <p className="text-slate-600 text-[11px]">
+                        {isMr ? matchedCustomer.nameMr : matchedCustomer.name} • {matchedCustomer.mobile}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId(matchedCustomer.id);
+                        setCustName('');
+                        setCustMobile('');
+                        setCustAddress('');
+                        setCustGst('');
+                        setIsAddingCustomer(false);
+                      }}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg transition-colors text-[10px] shadow-xs"
+                    >
+                      {isMr ? "हा निवडा" : "Use This"}
+                    </button>
+                  </motion.div>
+                )}
                 <input 
                   type="text" placeholder={isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
                   value={custAddress} onChange={e => setCustAddress(e.target.value)}

@@ -956,6 +956,7 @@ export default function App() {
       outstanding: 0,
       ledger: []
     };
+    let finalClient = client;
     try {
       const response = await fetch('/api/customers', {
         method: 'POST',
@@ -965,6 +966,7 @@ export default function App() {
       if (response.ok) {
         const saved = await response.json();
         setCustomers(prev => [...prev, saved]);
+        finalClient = saved;
       } else {
         setCustomers(prev => [...prev, client]);
       }
@@ -972,7 +974,8 @@ export default function App() {
       console.warn('Backend connection unavailable, saving locally:', err);
       setCustomers(prev => [...prev, client]);
     }
-    logEvent('CRM_CLIENT_ADD', `Registered new client: ${client.name} | Credit Protection: ₹${client.creditLimit}`);
+    logEvent('CRM_CLIENT_ADD', `Registered new client: ${finalClient.name} | Credit Protection: ₹${finalClient.creditLimit}`);
+    return finalClient;
   };
 
   const handleAddSupplier = async (newS: Omit<Supplier, 'id' | 'outstanding' | 'ledger'>) => {
