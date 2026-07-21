@@ -52,7 +52,7 @@ export function getWhatsAppBillingMessage(
   const shopName = settings.shopName;
   const itemsCount = invoice ? invoice.items.length : 0;
   const paymentMode = invoice ? invoice.paymentMode : 'N/A';
-  const link = invoice ? `${previewBaseUrl}/invoice-preview/${invoice.invoiceNumber}` : `${previewBaseUrl}/outstanding-view`;
+  const link = invoice ? `${previewBaseUrl}/#/invoice-preview/${invoice.invoiceNumber}` : `${previewBaseUrl}/#/outstanding-view`;
 
   const vars = {
     customerName,

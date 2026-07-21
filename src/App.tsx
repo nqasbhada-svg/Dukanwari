@@ -172,37 +172,50 @@ export default function App() {
   });
 
   // Public Invoice & Outstanding Billing Router
-  const [invoicePreviewId, setInvoicePreviewId] = useState<string | null>(() => {
+  const getInvoiceIdFromUrl = (): string | null => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
-      const match = path.match(/^\/invoice-preview\/([^/]+)/);
-      return match ? match[1] : null;
+      let match = path.match(/^\/invoice-preview\/([^/]+)/);
+      if (match) return match[1];
+
+      const hash = window.location.hash;
+      match = hash.match(/^#\/invoice-preview\/([^/]+)/) || hash.match(/^#invoice-preview\/([^/]+)/);
+      if (match) return match[1];
     }
     return null;
-  });
+  };
 
-  const [isOutstandingView, setIsOutstandingView] = useState<boolean>(() => {
+  const getIsOutstandingFromUrl = (): boolean => {
     if (typeof window !== 'undefined') {
-      return window.location.pathname === '/outstanding-view';
+      return (
+        window.location.pathname === '/outstanding-view' ||
+        window.location.hash === '#/outstanding-view' ||
+        window.location.hash === '#outstanding-view'
+      );
     }
     return false;
-  });
+  };
+
+  const [invoicePreviewId, setInvoicePreviewId] = useState<string | null>(getInvoiceIdFromUrl);
+  const [isOutstandingView, setIsOutstandingView] = useState<boolean>(getIsOutstandingFromUrl);
 
   const [outstandingSearchMobile, setOutstandingSearchMobile] = useState<string>('');
   const [hasSearchedOutstanding, setHasSearchedOutstanding] = useState<boolean>(false);
   const [publicPreviewTemplate, setPublicPreviewTemplate] = useState<'thermal' | 'a4'>('a4');
   const [isLoadingCloudData, setIsLoadingCloudData] = useState<boolean>(true);
 
-  // Sync state with popstate (browser back/forward buttons)
+  // Sync state with popstate and hashchange (browser back/forward or hash changes)
   useEffect(() => {
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      const match = path.match(/^\/invoice-preview\/([^/]+)/);
-      setInvoicePreviewId(match ? match[1] : null);
-      setIsOutstandingView(path === '/outstanding-view');
+    const handleNavigationChange = () => {
+      setInvoicePreviewId(getInvoiceIdFromUrl());
+      setIsOutstandingView(getIsOutstandingFromUrl());
     };
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
+    window.addEventListener('popstate', handleNavigationChange);
+    window.addEventListener('hashchange', handleNavigationChange);
+    return () => {
+      window.removeEventListener('popstate', handleNavigationChange);
+      window.removeEventListener('hashchange', handleNavigationChange);
+    };
   }, []);
 
   const [categories, setCategories] = useState<Category[]>(() => {
@@ -1172,7 +1185,7 @@ export default function App() {
           <p className="text-sm text-slate-400 mb-6 max-w-sm">The invoice number "{invoicePreviewId}" was not found or has been archived.</p>
           <button 
             onClick={() => {
-              window.history.pushState({}, '', '/');
+              window.location.hash = '';
               setInvoicePreviewId(null);
             }}
             className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold font-sans transition shadow-md"
@@ -1231,7 +1244,7 @@ export default function App() {
 
             <button 
               onClick={() => {
-                window.history.pushState({}, '', '/');
+                window.location.hash = '';
                 setInvoicePreviewId(null);
               }}
               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition"
@@ -1453,7 +1466,7 @@ export default function App() {
 
           <button 
             onClick={() => {
-              window.history.pushState({}, '', '/');
+              window.location.hash = '';
               setIsOutstandingView(false);
               setHasSearchedOutstanding(false);
               setOutstandingSearchMobile('');
@@ -1574,7 +1587,7 @@ export default function App() {
                             
                             <button 
                               onClick={() => {
-                                window.history.pushState({}, '', `/invoice-preview/${inv.invoiceNumber}`);
+                                window.location.hash = `/invoice-preview/${inv.invoiceNumber}`;
                                 setInvoicePreviewId(inv.invoiceNumber);
                               }}
                               className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition"
