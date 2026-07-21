@@ -16,7 +16,8 @@ import {
   CreditCard,
   Banknote,
   Smartphone,
-  PieChart
+  PieChart,
+  X
 } from 'lucide-react';
 import { Product, InvoiceItem, Invoice, Customer, ShopSettings, AppTranslations } from '../types';
 import { getWhatsAppBillingMessage, openWhatsAppBillingShare } from '../utils/whatsapp';
@@ -49,8 +50,10 @@ export default function BillingTerminalView({
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [barcodeSearch, setBarcodeSearch] = useState('');
 
-  // Customer Selection
+  // Customer Selection & Popup
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>(customers[0]?.id || '');
+  const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
   const [isAddingCustomer, setIsAddingCustomer] = useState(false);
   const [custName, setCustName] = useState('');
   const [custMobile, setCustMobile] = useState('');
@@ -139,6 +142,7 @@ export default function BillingTerminalView({
       setCustAddress('');
       setCustGst('');
       setIsAddingCustomer(false);
+      setShowCustomerPopup(false);
       return;
     }
 
@@ -160,6 +164,7 @@ export default function BillingTerminalView({
     setCustAddress('');
     setCustGst('');
     setIsAddingCustomer(false);
+    setShowCustomerPopup(false);
   };
 
   // Calculations
@@ -431,96 +436,53 @@ export default function BillingTerminalView({
           <div className="flex justify-between items-center mb-4">
             <h3 className="font-extrabold text-sm text-slate-800 flex items-center gap-2">
               <UserPlus size={18} className="text-emerald-500" />
-              Select Customer
+              {isMr ? "ग्राहक माहिती" : "Customer Info"}
             </h3>
             <button 
-              id="toggle-new-customer-btn"
-              onClick={() => setIsAddingCustomer(!isAddingCustomer)}
+              id="open-customer-popup-btn"
+              onClick={() => setShowCustomerPopup(true)}
               className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors flex items-center gap-1"
             >
-              {isAddingCustomer ? 'Cancel' : '+ New'}
+              {isMr ? "ग्राहक निवडा / बदला" : "Select / Change"}
             </button>
           </div>
           
-          <AnimatePresence mode="wait">
-            {isAddingCustomer ? (
-              <motion.form 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                onSubmit={handleAddCustomerInline} 
-                className="space-y-3 overflow-hidden"
+          {(() => {
+            const currentCust = customers.find(c => c.id === selectedCustomerId);
+            if (!currentCust) return (
+              <div 
+                onClick={() => setShowCustomerPopup(true)}
+                className="p-4 bg-slate-50 hover:bg-slate-100 border border-dashed border-slate-200 rounded-2xl cursor-pointer text-center text-xs text-slate-500 font-semibold transition"
               >
-                <input 
-                  type="text" placeholder={isMr ? "ग्राहकाचे नाव" : "Customer Name"}
-                  value={custName} onChange={e => setCustName(e.target.value)} required
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
-                />
-                <input 
-                  type="tel" placeholder={isMr ? "मोबाईल नंबर" : "Mobile Number"}
-                  value={custMobile} onChange={e => setCustMobile(e.target.value)} required
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
-                />
-                
-                {matchedCustomer && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-800"
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-amber-900 font-extrabold flex items-center gap-1">
-                        <AlertCircle size={14} className="text-amber-600" />
-                        {isMr ? "आधीच नोंदणीकृत ग्राहक आढळला!" : "Existing Customer Found!"}
-                      </p>
-                      <p className="text-slate-600 text-[11px]">
-                        {isMr ? matchedCustomer.nameMr : matchedCustomer.name} • {matchedCustomer.mobile}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomerId(matchedCustomer.id);
-                        setCustName('');
-                        setCustMobile('');
-                        setCustAddress('');
-                        setCustGst('');
-                        setIsAddingCustomer(false);
-                      }}
-                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg transition-colors text-[10px] shadow-xs"
-                    >
-                      {isMr ? "हा निवडा" : "Use This"}
-                    </button>
-                  </motion.div>
-                )}
-                <input 
-                  type="text" placeholder={isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
-                  value={custAddress} onChange={e => setCustAddress(e.target.value)}
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-emerald-400 focus:bg-white transition-colors text-slate-800"
-                />
-                <button id="save-new-customer-btn" type="submit" className="w-full p-3 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold rounded-xl transition-colors shadow-md shadow-emerald-500/20">
-                  Save Customer
-                </button>
-              </motion.form>
-            ) : (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                {isMr ? "कोणताही ग्राहक निवडलेला नाही. निवडण्यासाठी येथे क्लिक करा." : "No customer selected. Click here to select."}
+              </div>
+            );
+            return (
+              <div 
+                onClick={() => setShowCustomerPopup(true)}
+                className="p-4 bg-emerald-50/50 hover:bg-emerald-50 border border-emerald-100 rounded-2xl cursor-pointer transition flex items-center justify-between"
               >
-                <select
-                  value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-extrabold text-slate-700 outline-none focus:border-emerald-400 focus:bg-white transition-colors appearance-none cursor-pointer"
-                >
-                  <option value="" disabled>Select a customer...</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.id}>{isMr ? c.nameMr : c.name} • {c.mobile}</option>
-                  ))}
-                </select>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                <div className="space-y-1">
+                  <p className="font-extrabold text-sm text-slate-800">
+                    {isMr ? currentCust.nameMr : currentCust.name}
+                  </p>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    Mobile: {currentCust.mobile}
+                  </p>
+                  {currentCust.address && (
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Address: {currentCust.address}
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] uppercase font-extrabold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full">
+                    Selected
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Discounts & Promos */}
@@ -824,6 +786,245 @@ export default function BillingTerminalView({
                   Close & New Transaction
                 </button>
               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Customer Popup Screen / Modal Overlay */}
+      {showCustomerPopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                  <UserPlus size={20} className="text-indigo-600" />
+                  {isMr ? "ग्राहक निवडा किंवा नवीन बनवा" : "Select or Add Customer"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isMr ? "शोधण्यासाठी मोबाईल नंबर किंवा नाव वापरा" : "Search existing customers or register a new one"}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowCustomerPopup(false);
+                  setCustomerSearchQuery('');
+                  setCustName('');
+                  setCustMobile('');
+                  setCustAddress('');
+                  setCustGst('');
+                }}
+                className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-800 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              
+              {/* Search Existing Customer Box */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                  {isMr ? "हयात ग्राहक शोधा" : "Search Existing Customer"}
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder={isMr ? "नाव किंवा मोबाईल नंबरने शोधा..." : "Type Name or Phone number..."}
+                    value={customerSearchQuery}
+                    onChange={(e) => setCustomerSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                  />
+                </div>
+
+                {/* Display matched search results if typing */}
+                {customerSearchQuery.trim().length > 0 && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl divide-y divide-slate-100 max-h-48 overflow-y-auto mt-2 shadow-xs">
+                    {customers
+                      .filter(c => 
+                        c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) || 
+                        c.mobile.includes(customerSearchQuery) || 
+                        (c.nameMr && c.nameMr.includes(customerSearchQuery))
+                      )
+                      .map(c => (
+                        <div 
+                          key={c.id}
+                          onClick={() => {
+                            setSelectedCustomerId(c.id);
+                            setCustomerSearchQuery('');
+                            setShowCustomerPopup(false);
+                          }}
+                          className="p-3 hover:bg-emerald-50/50 cursor-pointer flex justify-between items-center transition"
+                        >
+                          <div>
+                            <p className="font-bold text-xs text-slate-800">{isMr ? c.nameMr : c.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">Mob: {c.mobile}</p>
+                          </div>
+                          <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded">
+                            Select
+                          </span>
+                        </div>
+                      ))}
+                    {customers.filter(c => 
+                      c.name.toLowerCase().includes(customerSearchQuery.toLowerCase()) || 
+                      c.mobile.includes(customerSearchQuery)
+                    ).length === 0 && (
+                      <p className="p-3 text-center text-xs text-slate-400 font-semibold">
+                        No matching customers found.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Select Grid (up to 6 recent/top customers for quick selection) */}
+              {customerSearchQuery.trim().length === 0 && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                    {isMr ? "त्वरित ग्राहक निवड" : "Quick Select Customer"}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                    {customers.slice(0, 6).map(c => {
+                      const isSelected = selectedCustomerId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedCustomerId(c.id);
+                            setShowCustomerPopup(false);
+                          }}
+                          className={`p-2.5 text-left rounded-xl border text-xs transition flex flex-col justify-between h-14 ${
+                            isSelected 
+                              ? 'border-emerald-500 bg-emerald-50 text-emerald-800 font-bold' 
+                              : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="truncate block font-bold w-full">{isMr ? c.nameMr : c.name}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">{c.mobile}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-slate-100 my-4"></div>
+
+              {/* Add New Customer Form */}
+              <form onSubmit={handleAddCustomerInline} className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-wider">
+                    {isMr ? "नवीन ग्राहक नोंदणी करा" : "Register New Customer"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">
+                      {isMr ? "नाव" : "Customer Name"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder={isMr ? "उदा. आनंद पाटील" : "e.g. Anand Patil"}
+                      value={custName} 
+                      onChange={e => setCustName(e.target.value)} 
+                      required
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">
+                      {isMr ? "मोबाईल नंबर" : "Mobile Number"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="tel" 
+                      placeholder="10-digit number"
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                      value={custMobile} 
+                      onChange={e => setCustMobile(e.target.value)} 
+                      required
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                {/* Match Existing Customer Banner inline in popup form */}
+                {matchedCustomer && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-800"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-amber-900 font-extrabold flex items-center gap-1">
+                        <AlertCircle size={14} className="text-amber-600" />
+                        {isMr ? "या नंबरवर आधीच ग्राहक नोंदणीकृत आहे!" : "Customer already registered!"}
+                      </p>
+                      <p className="text-slate-600 text-[11px]">
+                        {isMr ? matchedCustomer.nameMr : matchedCustomer.name} • {matchedCustomer.mobile}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedCustomerId(matchedCustomer.id);
+                        setCustName('');
+                        setCustMobile('');
+                        setCustAddress('');
+                        setCustGst('');
+                        setShowCustomerPopup(false);
+                      }}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg transition-colors text-[10px] shadow-xs"
+                    >
+                      {isMr ? "हा निवडा" : "Use This"}
+                    </button>
+                  </motion.div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 block">
+                    {isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder={isMr ? "उदा. शिवाजीनगर, पुणे" : "e.g. Shivajinagar, Pune"}
+                    value={custAddress} 
+                    onChange={e => setCustAddress(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 block">
+                    GSTIN (Optional)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="27AAAAA0000A1Z1"
+                    maxLength={15}
+                    value={custGst} 
+                    onChange={e => setCustGst(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold font-mono uppercase outline-none transition text-slate-800"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full p-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl transition-colors shadow-md shadow-indigo-600/20 text-xs uppercase tracking-wider"
+                >
+                  {isMr ? "नवीन ग्राहक नोंदवा आणि वापरा" : "Register and Select Customer"}
+                </button>
+              </form>
             </div>
           </motion.div>
         </div>
