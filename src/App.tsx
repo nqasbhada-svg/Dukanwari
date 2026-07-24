@@ -985,6 +985,7 @@ export default function App() {
       outstanding: 0,
       ledger: []
     };
+    let finalVendor = vendor;
     try {
       const response = await fetch('/api/suppliers', {
         method: 'POST',
@@ -994,6 +995,7 @@ export default function App() {
       if (response.ok) {
         const saved = await response.json();
         setSuppliers(prev => [...prev, saved]);
+        finalVendor = saved;
       } else {
         setSuppliers(prev => [...prev, vendor]);
       }
@@ -1001,7 +1003,8 @@ export default function App() {
       console.warn('Backend connection unavailable, saving locally:', err);
       setSuppliers(prev => [...prev, vendor]);
     }
-    logEvent('VEND_SUP_ADD', `Registered new wholesale vendor: ${vendor.name}`);
+    logEvent('VEND_SUP_ADD', `Registered new wholesale vendor: ${finalVendor.name}`);
+    return finalVendor;
   };
 
   const handleGenerateInvoice = async (invoice: Invoice) => {
@@ -2309,6 +2312,7 @@ export default function App() {
                       isMr={isMr}
                       onAddPurchaseBill={handleAddPurchaseBill}
                       onUpdateProductStock={handleUpdateProductStock}
+                      onAddSupplier={handleAddSupplier}
                     />
                   )}
 

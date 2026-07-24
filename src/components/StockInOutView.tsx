@@ -15,7 +15,11 @@ import {
   FileText,
   RefreshCw,
   Clock,
-  CheckCircle
+  CheckCircle,
+  UserPlus,
+  Search,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Product, Supplier, PurchaseBill, AppTranslations } from '../types';
 
@@ -27,6 +31,7 @@ interface StockInOutViewProps {
   isMr: boolean;
   onAddPurchaseBill: (bill: PurchaseBill) => void;
   onUpdateProductStock: (productId: string, quantityChange: number) => void;
+  onAddSupplier?: (supplier: Omit<Supplier, 'id' | 'outstanding' | 'ledger'>) => any;
 }
 
 export default function StockInOutView({
@@ -36,10 +41,23 @@ export default function StockInOutView({
   t,
   isMr,
   onAddPurchaseBill,
-  onUpdateProductStock
+  onUpdateProductStock,
+  onAddSupplier
 }: StockInOutViewProps) {
   // Tabs: 'inward' (Purchase Entry), 'outward' (Returns/Exchanges)
   const [activeSubTab, setActiveSubTab] = useState<'inward' | 'outward'>('inward');
+
+  // Supplier Add States
+  const [showSupplierPopup, setShowSupplierPopup] = useState(false);
+  const [supplierSearchQuery, setSupplierSearchQuery] = useState('');
+  const [supName, setSupName] = useState('');
+  const [supMobile, setSupMobile] = useState('');
+  const [supAddress, setSupAddress] = useState('');
+  const [supGst, setSupGst] = useState('');
+  
+  const matchedSupplier = supMobile.trim().length >= 3
+    ? suppliers.find(s => s.mobile.replace(/\s+/g, '').includes(supMobile.trim()))
+    : null;
 
   // Purchase Form fields
   const [billNumber, setBillNumber] = useState('');
@@ -62,6 +80,42 @@ export default function StockInOutView({
     if (prod) {
       setPurchaseRate(prod.purchasePrice);
     }
+  };
+
+  const handleAddSupplierInline = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supName || !supMobile) return;
+
+    if (matchedSupplier) {
+      setSupplierId(matchedSupplier.id);
+      setSupName('');
+      setSupMobile('');
+      setSupAddress('');
+      setSupGst('');
+      setShowSupplierPopup(false);
+      return;
+    }
+
+    if (onAddSupplier) {
+      const newSupplier = await onAddSupplier({
+        name: supName,
+        nameMr: supName,
+        mobile: supMobile,
+        address: supAddress,
+        gstNumber: supGst,
+        email: '',
+      });
+
+      if (newSupplier && newSupplier.id) {
+        setSupplierId(newSupplier.id);
+      }
+    }
+    
+    setSupName('');
+    setSupMobile('');
+    setSupAddress('');
+    setSupGst('');
+    setShowSupplierPopup(false);
   };
 
   const handleSavePurchase = (e: React.FormEvent) => {
@@ -189,19 +243,41 @@ export default function StockInOutView({
               </div>
 
               <div className="space-y-1">
-                <label className="font-semibold block text-slate-600">Supplier/Vendor Party</label>
-                <div className="relative">
-                  <User className="absolute left-2.5 top-2.5 text-slate-400" size={14} />
-                  <select
-                    value={supplierId}
-                    onChange={(e) => setSupplierId(e.target.value)}
-                    className="w-full pl-8 pr-3 py-2 border border-slate-200 rounded-lg outline-none bg-white font-semibold"
+                <div className="flex justify-between items-center">
+                  <label className="font-semibold block text-slate-600">Supplier/Vendor Party</label>
+                  <button 
+                    type="button"
+                    onClick={() => setShowSupplierPopup(true)}
+                    className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded hover:bg-indigo-100 transition-colors"
                   >
-                    {suppliers.map(s => (
-                      <option key={s.id} value={s.id}>{isMr ? s.nameMr : s.name}</option>
-                    ))}
-                  </select>
+                    {isMr ? "बदला / नवीन जोडा" : "Change / Add"}
+                  </button>
                 </div>
+                {(() => {
+                  const currentSup = suppliers.find(s => s.id === supplierId);
+                  if (!currentSup) return (
+                    <div 
+                      onClick={() => setShowSupplierPopup(true)}
+                      className="p-2 border border-dashed border-slate-200 rounded-lg cursor-pointer text-center text-[10px] text-slate-500 font-semibold"
+                    >
+                      Click to select supplier
+                    </div>
+                  );
+                  return (
+                    <div 
+                      onClick={() => setShowSupplierPopup(true)}
+                      className="p-2 bg-indigo-50/50 border border-indigo-100 rounded-lg cursor-pointer flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-bold text-slate-800 text-xs">
+                          {isMr ? currentSup.nameMr : currentSup.name}
+                        </p>
+                        <p className="text-[10px] text-slate-500">Mob: {currentSup.mobile}</p>
+                      </div>
+                      <User size={14} className="text-indigo-400" />
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="space-y-1">
@@ -388,6 +464,245 @@ export default function StockInOutView({
               Log Return Action & Re-adjust Stocks
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Supplier Popup Screen / Modal Overlay */}
+      {showSupplierPopup && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 overflow-y-auto">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden border border-slate-100 flex flex-col max-h-[90vh]"
+          >
+            {/* Modal Header */}
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <div>
+                <h3 className="font-extrabold text-base text-slate-800 flex items-center gap-2">
+                  <UserPlus size={20} className="text-indigo-600" />
+                  {isMr ? "विक्रेता निवडा किंवा नवीन बनवा" : "Select or Add Supplier"}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  {isMr ? "शोधण्यासाठी मोबाईल नंबर किंवा नाव वापरा" : "Search existing suppliers or register a new one"}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowSupplierPopup(false);
+                  setSupplierSearchQuery('');
+                  setSupName('');
+                  setSupMobile('');
+                  setSupAddress('');
+                  setSupGst('');
+                }}
+                className="p-1.5 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-800 transition"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-5 flex-1">
+              
+              {/* Search Existing Supplier Box */}
+              <div className="space-y-2">
+                <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                  {isMr ? "हयात विक्रेता शोधा" : "Search Existing Supplier"}
+                </label>
+                <div className="relative">
+                  <Search className="absolute left-3.5 top-3.5 text-slate-400" size={16} />
+                  <input
+                    type="text"
+                    placeholder={isMr ? "नाव किंवा मोबाईल नंबरने शोधा..." : "Type Name or Phone number..."}
+                    value={supplierSearchQuery}
+                    onChange={(e) => setSupplierSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                  />
+                </div>
+
+                {/* Display matched search results if typing */}
+                {supplierSearchQuery.trim().length > 0 && (
+                  <div className="bg-slate-50 border border-slate-100 rounded-xl divide-y divide-slate-100 max-h-48 overflow-y-auto mt-2 shadow-xs">
+                    {suppliers
+                      .filter(s => 
+                        s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) || 
+                        s.mobile.includes(supplierSearchQuery) || 
+                        (s.nameMr && s.nameMr.includes(supplierSearchQuery))
+                      )
+                      .map(s => (
+                        <div 
+                          key={s.id}
+                          onClick={() => {
+                            setSupplierId(s.id);
+                            setSupplierSearchQuery('');
+                            setShowSupplierPopup(false);
+                          }}
+                          className="p-3 hover:bg-indigo-50/50 cursor-pointer flex justify-between items-center transition"
+                        >
+                          <div>
+                            <p className="font-bold text-xs text-slate-800">{isMr ? s.nameMr : s.name}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">Mob: {s.mobile}</p>
+                          </div>
+                          <span className="text-[9px] font-extrabold text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded">
+                            Select
+                          </span>
+                        </div>
+                      ))}
+                    {suppliers.filter(s => 
+                      s.name.toLowerCase().includes(supplierSearchQuery.toLowerCase()) || 
+                      s.mobile.includes(supplierSearchQuery)
+                    ).length === 0 && (
+                      <p className="p-3 text-center text-xs text-slate-400 font-semibold">
+                        No matching suppliers found.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Select Grid (up to 6 recent/top suppliers for quick selection) */}
+              {supplierSearchQuery.trim().length === 0 && (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider block">
+                    {isMr ? "त्वरित विक्रेता निवड" : "Quick Select Supplier"}
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto">
+                    {suppliers.slice(0, 6).map(s => {
+                      const isSelected = supplierId === s.id;
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            setSupplierId(s.id);
+                            setShowSupplierPopup(false);
+                          }}
+                          className={`p-2.5 text-left rounded-xl border text-xs transition flex flex-col justify-between h-14 ${
+                            isSelected 
+                              ? 'border-indigo-500 bg-indigo-50 text-indigo-800 font-bold' 
+                              : 'border-slate-100 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <span className="truncate block font-bold w-full">{isMr ? s.nameMr : s.name}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5 font-medium">{s.mobile}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-slate-100 my-4"></div>
+
+              {/* Add New Supplier Form */}
+              <form onSubmit={handleAddSupplierInline} className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-extrabold text-indigo-500 uppercase tracking-wider">
+                    {isMr ? "नवीन विक्रेता नोंदणी करा" : "Register New Supplier"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">
+                      {isMr ? "नाव" : "Supplier Name"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder={isMr ? "उदा. आनंद मिल्स" : "e.g. Anand Mills"}
+                      value={supName} 
+                      onChange={e => setSupName(e.target.value)} 
+                      required
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 block">
+                      {isMr ? "मोबाईल नंबर" : "Mobile Number"} <span className="text-rose-500">*</span>
+                    </label>
+                    <input 
+                      type="tel" 
+                      placeholder="10-digit number"
+                      maxLength={10}
+                      pattern="[0-9]{10}"
+                      value={supMobile} 
+                      onChange={e => setSupMobile(e.target.value)} 
+                      required
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                {/* Match Existing Supplier Banner */}
+                {matchedSupplier && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between text-xs font-semibold text-slate-800"
+                  >
+                    <div className="space-y-0.5">
+                      <p className="text-amber-900 font-extrabold flex items-center gap-1">
+                        <AlertCircle size={14} className="text-amber-600" />
+                        {isMr ? "या नंबरवर आधीच विक्रेता नोंदणीकृत आहे!" : "Supplier already registered!"}
+                      </p>
+                      <p className="text-slate-600 text-[11px]">
+                        {isMr ? matchedSupplier.nameMr : matchedSupplier.name} • {matchedSupplier.mobile}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSupplierId(matchedSupplier.id);
+                        setSupName('');
+                        setSupMobile('');
+                        setSupAddress('');
+                        setSupGst('');
+                        setShowSupplierPopup(false);
+                      }}
+                      className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-lg transition-colors text-[10px] shadow-xs"
+                    >
+                      {isMr ? "हा निवडा" : "Use This"}
+                    </button>
+                  </motion.div>
+                )}
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 block">
+                    {isMr ? "पत्ता (ऐच्छिक)" : "Address / Location (Optional)"}
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder={isMr ? "उदा. मुंबई" : "e.g. Mumbai"}
+                    value={supAddress} 
+                    onChange={e => setSupAddress(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-slate-500 block">
+                    GSTIN (Optional)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="27AAAAA0000A1Z1"
+                    maxLength={15}
+                    value={supGst} 
+                    onChange={e => setSupGst(e.target.value)}
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold font-mono uppercase outline-none transition text-slate-800"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  className="w-full p-3 bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold rounded-xl transition-colors shadow-md shadow-indigo-600/20 text-xs uppercase tracking-wider"
+                >
+                  {isMr ? "नवीन विक्रेता नोंदवा आणि वापरा" : "Register and Select Supplier"}
+                </button>
+              </form>
+            </div>
+          </motion.div>
         </div>
       )}
     </div>
