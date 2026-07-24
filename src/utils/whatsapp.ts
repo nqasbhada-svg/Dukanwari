@@ -42,7 +42,7 @@ export function getWhatsAppBillingMessage(
   type: 'invoice' | 'summary' | 'reminder' | 'offer',
   invoice: Invoice | null,
   settings: ShopSettings,
-  previewBaseUrl: string = typeof window !== 'undefined' ? window.location.origin : 'https://ais-pre-dgftlp6oy2gnxl5x5ge4mb-98013956105.asia-southeast1.run.app',
+  previewBaseUrl: string = typeof window !== 'undefined' ? window.location.href.split('#')[0].replace(/\/$/, '') : 'https://ais-pre-dgftlp6oy2gnxl5x5ge4mb-98013956105.asia-southeast1.run.app',
   extraCustomerDetails?: { name: string; outstanding: number; mobile: string }
 ): string {
   // Extract info from invoice if present, else fallback to customer details

@@ -153,7 +153,8 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
       return true;
     } else {
       // Fallback: download
-      return await downloadElementAsPDF(elementId, filename);
+      await downloadElementAsPDF(elementId, filename);
+      return false; // Return false to indicate native share didn't happen
     }
   } catch (error) {
     console.error('Error sharing PDF:', error);
