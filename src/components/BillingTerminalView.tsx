@@ -298,7 +298,7 @@ export default function BillingTerminalView({
             </div>
             <input 
               type="text"
-              placeholder={isMr ? "कपड्याचे नाव शोधून निवडा..." : "Search clothes by name / code..."}
+              placeholder={isMr ? "उत्पादनाचे नाव शोधून निवडा..." : "Search product by name / code..."}
               value={searchProductQuery}
               onChange={(e) => {
                 setSearchProductQuery(e.target.value);
