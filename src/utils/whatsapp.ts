@@ -70,14 +70,14 @@ export function getWhatsAppBillingMessage(
       return interpolateWhatsAppTemplate(template, vars);
     }
     case 'summary': {
-      return `Order Summary from *${shopName}* for ${customerName}. Items: ${itemsCount} garments purchased. Total Bill: *₹${grandTotal}*. Paid via: ${paymentMode}.`;
+      return `Order Summary from *${shopName}* for ${customerName}. Items: ${itemsCount} products purchased. Total Bill: *₹${grandTotal}*. Paid via: ${paymentMode}.`;
     }
     case 'reminder': {
       const template = settings.templateReminder || 'Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *${shopName}* of amount *₹{grandTotal}*. Please clear via UPI.';
       return interpolateWhatsAppTemplate(template, vars);
     }
     case 'offer': {
-      const template = settings.templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!';
+      const template = settings.templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest product collections. Visit us today!';
       return interpolateWhatsAppTemplate(template, vars);
     }
     default:

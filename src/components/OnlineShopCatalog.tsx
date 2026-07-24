@@ -122,7 +122,7 @@ export default function OnlineShopCatalog({
               onClick={() => setSelectedCategory('All')}
               className={`w-full text-left p-2 rounded-lg font-semibold transition ${selectedCategory === 'All' ? 'bg-pink-50 text-pink-600' : 'hover:bg-slate-50'}`}
             >
-              All Garments
+              All Products
             </button>
             {categories.map(c => (
               <button
@@ -285,7 +285,7 @@ export default function OnlineShopCatalog({
 
                       <div className="relative">
                         <div className={`absolute -left-5 top-0.5 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center text-[8px] font-bold ${orderTimelineStep >= 2 ? 'bg-emerald-500 border-emerald-500 text-white' : 'bg-white border-slate-200'}`}>2</div>
-                        <span className={`font-bold block ${orderTimelineStep >= 2 ? 'text-slate-800' : 'text-slate-400'}`}>Garments Packaged (Wharehouse Satara)</span>
+                        <span className={`font-bold block ${orderTimelineStep >= 2 ? 'text-slate-800' : 'text-slate-400'}`}>Products Packaged (Wharehouse Satara)</span>
                         <span className="text-[10px] text-slate-400 font-mono block">Sat, 18 Jul 13:17</span>
                       </div>
 

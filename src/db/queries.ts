@@ -113,7 +113,7 @@ export async function getAllRegistrations() {
       },
       {
         id: 'reg-2026-002',
-        shopName: "Rajshree Garments",
+        shopName: "Rajshree Products",
         ownerName: "Rajesh Shinde",
         mobile: "9876543212",
         email: "rajesh@example.com",

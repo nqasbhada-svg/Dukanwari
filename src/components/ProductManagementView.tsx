@@ -675,8 +675,8 @@ export default function ProductManagementView({
                     className="w-full p-2 border border-slate-200 rounded-lg outline-none bg-white font-mono font-semibold"
                   >
                     <option value="0">0% (Exempted)</option>
-                    <option value="5">5% (Garments &lt; 1000)</option>
-                    <option value="12">12% (Garments &gt; 1000)</option>
+                    <option value="5">5% (Products &lt; 1000)</option>
+                    <option value="12">12% (Products &gt; 1000)</option>
                     <option value="18">18% (Luxury Fabrics)</option>
                   </select>
                 </div>

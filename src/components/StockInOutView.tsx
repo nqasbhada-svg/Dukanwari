@@ -115,7 +115,7 @@ export default function StockInOutView({
       alert(isMr ? `परतावा यशस्वी! ${product.itemName} चा स्टॉक +${returnQty} ने वाढला.` : `Return processed! Stock for ${product.itemName} increased by +${returnQty}.`);
     } else {
       // Exchange: stock remains net same or adjusted (this simulates direct net zero stock change or direct adjustment)
-      alert(isMr ? 'कपडा अदलाबदल (Exchange) यशस्वीरित्या नोंदवली गेली!' : 'Garment exchange logged successfully!');
+      alert(isMr ? 'कपडा अदलाबदल (Exchange) यशस्वीरित्या नोंदवली गेली!' : 'Product exchange logged successfully!');
     }
 
     setReturnInvoiceNo('');
@@ -287,7 +287,7 @@ export default function StockInOutView({
                     </div>
                     <span className="font-semibold text-slate-800 block line-clamp-1">From: {bill.supplierName}</span>
                     <div className="flex justify-between items-end">
-                      <span className="text-[10px] text-slate-500 font-medium">Qty: {bill.items.reduce((s, i) => s + i.quantity, 0)} garments</span>
+                      <span className="text-[10px] text-slate-500 font-medium">Qty: {bill.items.reduce((s, i) => s + i.quantity, 0)} products</span>
                       <span className="font-bold text-slate-900 font-mono">₹{bill.grandTotal.toLocaleString()}</span>
                     </div>
                   </div>
@@ -304,7 +304,7 @@ export default function StockInOutView({
             Process Return & Exchanges
           </h3>
           <p className="text-xs text-slate-400 leading-relaxed">
-            Quickly adjust clothing inventory levels when a customer brings back a size misfit or requests a garment exchange. Enter the original invoice reference for auditing trails.
+            Quickly adjust clothing inventory levels when a customer brings back a size misfit or requests a product exchange. Enter the original invoice reference for auditing trails.
           </p>
 
           <form onSubmit={handleProcessReturn} className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-slate-700">
@@ -321,7 +321,7 @@ export default function StockInOutView({
             </div>
 
             <div className="space-y-1">
-              <label className="font-semibold block text-slate-600">Garment Returned</label>
+              <label className="font-semibold block text-slate-600">Product Returned</label>
               <select
                 value={returnProductId}
                 onChange={(e) => setReturnProductId(e.target.value)}

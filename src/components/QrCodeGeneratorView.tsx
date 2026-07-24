@@ -206,7 +206,7 @@ export default function QrCodeGeneratorView({ products, t, isMr, shopSettings }:
       }
     }
     return {
-      name: manualName || (isMr ? 'नवीन उत्पादन' : 'New Garment Item'),
+      name: manualName || (isMr ? 'नवीन उत्पादन' : 'New Product Item'),
       price: manualPrice,
       size: manualSize || 'Free Size',
       color: manualColor || 'Mixed',
@@ -452,7 +452,7 @@ export default function QrCodeGeneratorView({ products, t, isMr, shopSettings }:
       ctx.textAlign = 'left';
       ctx.fillStyle = '#0F172A'; // Slate-900
 
-      // Garment Name (truncated if too long)
+      // Product Name (truncated if too long)
       ctx.font = 'bold 15px "Inter", sans-serif';
       let displayName = stickerData.name;
       if (displayName.length > 20) displayName = displayName.substring(0, 18) + '...';
@@ -830,7 +830,7 @@ export default function QrCodeGeneratorView({ products, t, isMr, shopSettings }:
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block">
-                          {isMr ? 'कपड्याचे नाव' : 'Garment / Item Name'}
+                          {isMr ? 'कपड्याचे नाव' : 'Product / Item Name'}
                         </label>
                         <input
                           type="text"

@@ -233,7 +233,7 @@ export const defaultSettings: ShopSettings = {
   currency: '₹',
   templateInvoice: 'Hello {customerName}, your digital invoice from *{shopName}* is ready. Amount: *₹{grandTotal}*. View PDF: {link}. Thank you!',
   templateReminder: 'Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *{shopName}* of amount *₹{grandTotal}*. Please clear via UPI.',
-  templateOffer: 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!'
+  templateOffer: 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest product collections. Visit us today!'
 };
 
 export const initialRegistrations: any[] = [];

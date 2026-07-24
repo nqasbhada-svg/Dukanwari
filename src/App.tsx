@@ -928,7 +928,7 @@ export default function App() {
       console.warn('Backend connection unavailable, saving locally:', err);
       setProducts(prev => prev.map(p => p.id === updatedP.id ? updatedP : p));
     }
-    logEvent('PRODUCT_EDIT', `Modified garment details for SKU ID: ${updatedP.barcode}`);
+    logEvent('PRODUCT_EDIT', `Modified product details for SKU ID: ${updatedP.barcode}`);
   };
 
   const handleDeleteProduct = async (id: string) => {
@@ -1304,7 +1304,7 @@ export default function App() {
                   <thead>
                     <tr className="bg-slate-50 text-slate-500 uppercase font-mono border-y border-slate-200">
                       <th className="py-2 px-1 text-center">#</th>
-                      <th className="py-2 px-2">Garment Description</th>
+                      <th className="py-2 px-2">Product Description</th>
                       <th className="py-2 px-1 font-mono text-center">HSN</th>
                       <th className="py-2 px-1 text-right font-mono">Rate (₹)</th>
                       <th className="py-2 px-1 text-center">Qty</th>

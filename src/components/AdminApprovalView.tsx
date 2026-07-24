@@ -493,7 +493,7 @@ export default function AdminApprovalView({ registrations, onUpdateStatus, isMr 
                     rows={2}
                     value={notesText}
                     onChange={(e) => setNotesText(e.target.value)}
-                    placeholder={isMr ? "उदा. योग्य ओळखपत्रांसह मंजूर केले. खाते सक्रिय आहे." : "e.g. Identity verified. Activating lifetime garment shop package."}
+                    placeholder={isMr ? "उदा. योग्य ओळखपत्रांसह मंजूर केले. खाते सक्रिय आहे." : "e.g. Identity verified. Activating lifetime product shop package."}
                     className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2 outline-none text-white text-xs leading-relaxed"
                   />
                 </div>

@@ -348,7 +348,7 @@ export default function BillingTerminalView({
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/40 border border-slate-100 overflow-hidden flex-1 flex flex-col">
           <div className="grid grid-cols-12 gap-2 bg-slate-50 border-b border-slate-100 p-4 text-[10px] font-extrabold text-slate-500 uppercase tracking-wider items-center">
             <div className="col-span-1 text-center">#</div>
-            <div className="col-span-4">Garment</div>
+            <div className="col-span-4">Product</div>
             <div className="col-span-2 text-center">Rate</div>
             <div className="col-span-3 text-center">Qty</div>
             <div className="col-span-1 text-center">GST</div>
@@ -419,7 +419,7 @@ export default function BillingTerminalView({
                 <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
                   <Barcode className="text-slate-300" size={32} />
                 </div>
-                <p className="text-slate-400 font-bold">No garments added to invoice yet.</p>
+                <p className="text-slate-400 font-bold">No products added to invoice yet.</p>
                 <p className="text-slate-400 text-xs mt-1">Scan a barcode or search above to begin.</p>
               </div>
             )}

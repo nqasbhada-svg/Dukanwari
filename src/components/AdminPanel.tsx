@@ -114,7 +114,7 @@ export default function AdminPanel({
     } else if (dummyActiveTab === 'reminder') {
       templateText = templateReminder || 'Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *{shopName}* of amount *₹{grandTotal}*. Please clear via UPI.';
     } else {
-      templateText = templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!';
+      templateText = templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest product collections. Visit us today!';
     }
 
     const messageText = templateText
@@ -583,7 +583,7 @@ export default function AdminPanel({
                       onClick={() => {
                         setTemplateInvoice('Hello {customerName}, your digital invoice from *{shopName}* is ready. Amount: *₹{grandTotal}*. View PDF: {link}. Thank you!');
                         setTemplateReminder('Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *{shopName}* of amount *₹{grandTotal}*. Please clear via UPI.');
-                        setTemplateOffer('Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!');
+                        setTemplateOffer('Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest product collections. Visit us today!');
                         setShowResetNotice(true);
                         setTimeout(() => {
                           setShowResetNotice(false);
@@ -733,7 +733,7 @@ export default function AdminPanel({
                               } else if (dummyActiveTab === 'reminder') {
                                 templateText = templateReminder || 'Dear {customerName}, this is a gentle reminder regarding outstanding invoice *{invoiceNumber}* from *{shopName}* of amount *₹{grandTotal}*. Please clear via UPI.';
                               } else {
-                                templateText = templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest garment collections. Visit us today!';
+                                templateText = templateOffer || 'Special Festive Offer from *{shopName}* for you, {customerName}! Get exclusive discounts on our latest product collections. Visit us today!';
                               }
 
                               const resultText = templateText
