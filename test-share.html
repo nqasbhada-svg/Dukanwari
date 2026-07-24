@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html><body><button id="btn">Share</button>
+<script>
+document.getElementById('btn').onclick = async () => {
+    const blob = new Blob(["test"], { type: "text/plain" });
+    const file = new File([blob], "test.txt", { type: "text/plain" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file] });
+    }
+}
+</script>
+</body></html>

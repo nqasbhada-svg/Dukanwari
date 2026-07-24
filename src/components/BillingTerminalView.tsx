@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Product, InvoiceItem, Invoice, Customer, ShopSettings, AppTranslations } from '../types';
 import { getWhatsAppBillingMessage, openWhatsAppBillingShare } from '../utils/whatsapp';
-import { downloadElementAsPDF } from '../utils/pdfGenerator';
+import { downloadElementAsPDF, shareElementAsPDF } from '../utils/pdfGenerator';
 
 interface BillingTerminalViewProps {
   products: Product[];
@@ -226,9 +226,18 @@ export default function BillingTerminalView({
     return getWhatsAppBillingMessage(type, activeInvoice, shopSettings);
   };
 
-  const handleWhatsAppSend = (msgType: 'invoice' | 'summary' | 'reminder') => {
+  const handleWhatsAppSend = async (msgType: 'invoice' | 'summary' | 'reminder') => {
     if (!activeInvoice) return;
-    openWhatsAppBillingShare(msgType, activeInvoice, shopSettings);
+    if (msgType === 'invoice') {
+      const msg = getWhatsAppBillingMessage('invoice', activeInvoice, shopSettings);
+      const success = await shareElementAsPDF('invoice-preview-modal-area', `Invoice_${activeInvoice.invoiceNumber}.pdf`, 'Invoice', msg);
+      if (!success) {
+        // Fallback to old URL share method or text if sharing failed/downloaded instead
+        openWhatsAppBillingShare(msgType, activeInvoice, shopSettings);
+      }
+    } else {
+      openWhatsAppBillingShare(msgType, activeInvoice, shopSettings);
+    }
   };
 
   return (
