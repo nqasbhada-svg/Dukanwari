@@ -84,7 +84,6 @@ export default function StockInOutView({
 
   const handleAddSupplierInline = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!supName || !supMobile) return;
 
     if (matchedSupplier) {
       setSupplierId(matchedSupplier.id);
@@ -97,10 +96,12 @@ export default function StockInOutView({
     }
 
     if (onAddSupplier) {
+      const finalName = supName.trim() || (isMr ? 'अज्ञात विक्रेता' : 'Unknown Supplier');
+      const finalMobile = supMobile.trim() || '-';
       const newSupplier = await onAddSupplier({
-        name: supName,
-        nameMr: supName,
-        mobile: supMobile,
+        name: finalName,
+        nameMr: finalName,
+        mobile: finalMobile,
         address: supAddress,
         gstNumber: supGst,
         email: '',
@@ -605,21 +606,20 @@ export default function StockInOutView({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">
-                      {isMr ? "नाव" : "Supplier Name"} <span className="text-rose-500">*</span>
+                      {isMr ? "नाव" : "Supplier Name"}
                     </label>
                     <input 
                       type="text" 
                       placeholder={isMr ? "उदा. आनंद मिल्स" : "e.g. Anand Mills"}
                       value={supName} 
                       onChange={e => setSupName(e.target.value)} 
-                      required
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
                     />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 block">
-                      {isMr ? "मोबाईल नंबर" : "Mobile Number"} <span className="text-rose-500">*</span>
+                      {isMr ? "मोबाईल नंबर" : "Mobile Number"}
                     </label>
                     <input 
                       type="tel" 
@@ -628,7 +628,6 @@ export default function StockInOutView({
                       pattern="[0-9]{10}"
                       value={supMobile} 
                       onChange={e => setSupMobile(e.target.value)} 
-                      required
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 focus:border-indigo-400 focus:bg-white rounded-xl text-xs font-semibold outline-none transition text-slate-800"
                     />
                   </div>

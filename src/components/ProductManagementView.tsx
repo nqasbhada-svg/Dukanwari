@@ -583,7 +583,6 @@ export default function ProductManagementView({
                   <label className="font-semibold block text-slate-600">{t.color}</label>
                   <input 
                     type="text"
-                    required
                     value={color}
                     onChange={(e) => setColor(e.target.value)}
                     placeholder="e.g. White / Pink"
@@ -594,7 +593,6 @@ export default function ProductManagementView({
                   <label className="font-semibold block text-slate-600">{t.size}</label>
                   <input 
                     type="text"
-                    required
                     value={size}
                     onChange={(e) => setSize(e.target.value)}
                     placeholder="e.g. L / 32 / XL"
