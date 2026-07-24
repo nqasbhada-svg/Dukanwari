@@ -2337,6 +2337,7 @@ export default function App() {
                     <BillingTerminalView 
                       products={products}
                       customers={customers}
+                      invoices={invoices}
                       t={t}
                       isMr={isMr}
                       onAddCustomer={handleAddCustomer}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, 
+  FileText,
+  Search,
   Plus, 
   Minus, 
   Trash2, 
@@ -26,6 +27,7 @@ import { downloadElementAsPDF, shareElementAsPDF } from '../utils/pdfGenerator';
 interface BillingTerminalViewProps {
   products: Product[];
   customers: Customer[];
+  invoices: Invoice[];
   onGenerateInvoice: (invoice: Invoice) => void;
   onAddCustomer: (c: Omit<Customer, 'id' | 'outstanding' | 'ledger'>) => any;
   shopSettings: ShopSettings;
@@ -36,12 +38,14 @@ interface BillingTerminalViewProps {
 export default function BillingTerminalView({ 
   products, 
   customers, 
+  invoices,
   onGenerateInvoice, 
   onAddCustomer,
   shopSettings,
   t,
   isMr
 }: BillingTerminalViewProps) {
+  const [activeTerminalTab, setActiveTerminalTab] = useState<'terminal' | 'recent'>('terminal');
   const [items, setItems] = useState<InvoiceItem[]>([]);
   const [invoiceType, setInvoiceType] = useState<'GST' | 'Non-GST'>('GST');
   
@@ -241,7 +245,33 @@ export default function BillingTerminalView({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="flex flex-col gap-4">
+      {/* Tab Switcher */}
+      <div className="flex bg-white p-1.5 rounded-2xl w-max shadow-sm border border-slate-100 print:hidden print-hidden">
+        <button
+          onClick={() => setActiveTerminalTab("terminal")}
+          className={`px-6 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+            activeTerminalTab === "terminal" 
+              ? "bg-indigo-600 text-white shadow-md" 
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          }`}
+        >
+          {isMr ? "बिलिंग टर्मिनल" : "Billing Terminal"}
+        </button>
+        <button
+          onClick={() => setActiveTerminalTab("recent")}
+          className={`px-6 py-2.5 rounded-xl text-xs font-extrabold transition-all ${
+            activeTerminalTab === "recent" 
+              ? "bg-indigo-600 text-white shadow-md" 
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+          }`}
+        >
+          {isMr ? "अलीकडील बिले" : "Recent Invoices"}
+        </button>
+      </div>
+
+      {activeTerminalTab === "terminal" && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       {/* Interactive Bill Panel (Left 2 columns) */}
       <div className="lg:col-span-2 flex flex-col gap-6">
         
@@ -1047,6 +1077,51 @@ export default function BillingTerminalView({
               </form>
             </div>
           </motion.div>
+        </div>
+      )}
+    </div>
+      )}
+
+      {activeTerminalTab === "recent" && (
+        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden print-hidden">
+          <div className="p-6 border-b border-slate-100 bg-slate-50/50">
+            <h2 className="text-lg font-extrabold text-slate-800">{isMr ? "अलीकडील 5 बिले" : "Recent 5 Invoices"}</h2>
+            <p className="text-xs text-slate-500 mt-1">{isMr ? "त्वरित प्रिंट किंवा पाहण्यासाठी तुमचे अलीकडील इनव्हॉइस" : "Your most recently generated invoices for quick reprint or view"}</p>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {invoices.slice().sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 5).map(inv => {
+              const cust = customers.find(c => c.id === inv.customerId);
+              return (
+                <div key={inv.id} className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                      <FileText size={18} />
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-800">{inv.invoiceNumber}</div>
+                      <div className="text-xs text-slate-500 font-medium">{cust ? (isMr ? cust.nameMr : cust.name) : "Walk-in Customer"} • {new Date(inv.date).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <div className="text-right">
+                      <div className="font-extrabold text-slate-800">₹{inv.grandTotal.toFixed(2)}</div>
+                      <div className="text-[10px] text-slate-400 font-bold uppercase">{inv.paymentMode}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setActiveInvoice(inv); setShowInvoicePreview(true); }} className="p-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg transition-colors" title="View & Print">
+                        <Printer size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {invoices.length === 0 && (
+              <div className="p-8 text-center text-slate-500 text-sm font-medium">
+                {isMr ? "अद्याप कोणतेही बिल तयार केलेले नाही." : "No invoices generated yet."}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
