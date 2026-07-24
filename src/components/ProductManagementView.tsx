@@ -20,6 +20,7 @@ import {
   Image as ImageIcon 
 } from 'lucide-react';
 import { Product, Category, Brand, Supplier, AppTranslations } from '../types';
+import { getProductIcon } from '../utils/productIcons';
 
 interface ProductManagementViewProps {
   products: Product[];
@@ -153,7 +154,7 @@ export default function ProductManagementView({
     const dummyBarcode = '89010' + Math.floor(1000000 + Math.random() * 9000000);
     setBarcode(dummyBarcode);
     setQrCode('QR_' + dummyBarcode);
-    setImages(['https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500']);
+    setImages([]);
     setMinStock(5);
     setOpeningStock(10);
     setSupplierId(suppliers[0]?.id || '');
@@ -318,10 +319,10 @@ export default function ProductManagementView({
               <div className="space-y-3">
                 <div className="flex gap-3">
                   <div className="w-16 h-20 bg-slate-100 rounded-lg overflow-hidden shrink-0 relative flex items-center justify-center border border-slate-100">
-                    {p.images[0] ? (
+                    {p.images[0] && p.images[0] !== 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500' ? (
                       <img src={p.images[0]} alt={p.itemName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      <ImageIcon className="text-slate-400" size={24} />
+                      getProductIcon(p.itemName, p.category, "text-slate-400", 24)
                     )}
                   </div>
                   <div className="space-y-1">

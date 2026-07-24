@@ -18,6 +18,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Product, Category, AppTranslations } from '../types';
+import { getProductIcon } from '../utils/productIcons';
 
 interface OnlineShopCatalogProps {
   products: Product[];
@@ -147,7 +148,11 @@ export default function OnlineShopCatalog({
                   <div className="space-y-2 relative">
                     {/* Simulated ecom picture */}
                     <div className="w-full h-40 bg-slate-100 rounded-lg overflow-hidden relative border border-slate-100 flex items-center justify-center">
-                      <img src={p.images[0]} alt={p.itemName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      {p.images[0] && p.images[0] !== 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500' ? (
+                        <img src={p.images[0]} alt={p.itemName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      ) : (
+                        getProductIcon(p.itemName, p.category, "text-slate-400", 32)
+                      )}
                       
                       <button 
                         onClick={() => toggleWishlist(p.id)}
