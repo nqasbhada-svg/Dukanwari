@@ -359,10 +359,12 @@ export default function BillingTerminalView({
             <AnimatePresence>
               {items.map((item, index) => (
                 <motion.div 
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  layout
+                  key={item.productId}
+                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.15 } }}
+                  transition={{ type: 'spring', stiffness: 500, damping: 30 }}
                   className="grid grid-cols-12 gap-2 p-3 items-center hover:bg-slate-50/80 transition-colors rounded-2xl"
                 >
                   <div className="col-span-1 text-center text-xs font-extrabold text-slate-400">{index + 1}</div>
