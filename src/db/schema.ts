@@ -159,3 +159,13 @@ export const shopSettings = pgTable('shop_settings', {
   templateReminder: text('template_reminder'),
   templateOffer: text('template_offer'),
 });
+
+// Expenses Table
+export const expenses = pgTable('expenses', {
+  id: text('id').primaryKey(),
+  date: text('date').notNull(),
+  category: text('category').notNull(),
+  amount: integer('amount').notNull(),
+  description: text('description'),
+  paidBy: text('paid_by'),
+});

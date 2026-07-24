@@ -34,7 +34,8 @@ import {
   Printer,
   Download,
   ArrowLeft,
-  QrCode
+  QrCode,
+  IndianRupee
 } from 'lucide-react';
 import { auth, googleAuthProvider, signInWithPopup } from './utils/firebase.ts';
 
@@ -75,6 +76,7 @@ import ProductManagementView from './components/ProductManagementView';
 import BillingTerminalView from './components/BillingTerminalView';
 import StockInOutView from './components/StockInOutView';
 import CustomerSupplierView from './components/CustomerSupplierView';
+import { ExpensesView } from './components/ExpensesView';
 import ReportsView from './components/ReportsView';
 import OnlineShopCatalog from './components/OnlineShopCatalog';
 import AdminPanel from './components/AdminPanel';
@@ -887,6 +889,45 @@ export default function App() {
   };
 
   // Database State mutators
+  const handleAddExpense = async (newExp: Omit<Expense, 'id'>) => {
+    const expense: Expense = {
+      ...newExp,
+      id: 'exp-' + Date.now(),
+    };
+    try {
+      const response = await fetch('/api/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(expense),
+      });
+      if (response.ok) {
+        const saved = await response.json();
+        setExpenses(prev => [saved, ...prev]);
+      } else {
+        setExpenses(prev => [expense, ...prev]);
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, saving locally:', err);
+      setExpenses(prev => [expense, ...prev]);
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    try {
+      const response = await fetch(`/api/expenses/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.ok) {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+      } else {
+        setExpenses(prev => prev.filter(e => e.id !== id));
+      }
+    } catch (err) {
+      console.warn('Backend connection unavailable, deleting locally:', err);
+      setExpenses(prev => prev.filter(e => e.id !== id));
+    }
+  };
+
   const handleAddProduct = async (newP: Omit<Product, 'id'>) => {
     const product: Product = {
       ...newP,
@@ -1662,6 +1703,7 @@ export default function App() {
         { id: 'billing', label: t.billing, icon: Receipt },
         { id: 'stock', label: isMr ? 'स्टॉक इन-आउट' : 'Stock In & Out', icon: Truck },
         { id: 'customers_suppliers', label: isMr ? 'ग्राहक आणि विक्रेता' : 'Ledgers & Directory', icon: Users },
+        { id: 'expenses', label: isMr ? 'खर्च' : 'Expenses', icon: IndianRupee },
         { id: 'reports', label: t.reports, icon: FileSpreadsheet, ownerOnly: true },
         { id: 'online_catalog', label: t.onlineCatalog, icon: ShoppingBag },
         { id: 'qr_generator', label: isMr ? 'क्यूआर कोड जनरेटर' : 'QR Code Generator', icon: QrCode },
@@ -2327,6 +2369,16 @@ export default function App() {
                       onAddSupplier={handleAddSupplier}
                       onReceiveCollection={handleReceiveCollection}
                       onPaySupplier={handlePaySupplier}
+                    />
+                  )}
+
+                  {currentView === 'expenses' && (
+                    <ExpensesView 
+                      expenses={expenses}
+                      onAddExpense={handleAddExpense}
+                      onDeleteExpense={handleDeleteExpense}
+                      isMr={isMr}
+                      darkMode={darkMode}
                     />
                   )}
 

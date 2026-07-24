@@ -64,6 +64,7 @@ var schema_exports = {};
 __export(schema_exports, {
   auditLogs: () => auditLogs,
   customers: () => customers,
+  expenses: () => expenses,
   invoices: () => invoices,
   products: () => products,
   purchaseBills: () => purchaseBills,
@@ -218,6 +219,14 @@ var shopSettings = (0, import_pg_core.pgTable)("shop_settings", {
   templateInvoice: (0, import_pg_core.text)("template_invoice"),
   templateReminder: (0, import_pg_core.text)("template_reminder"),
   templateOffer: (0, import_pg_core.text)("template_offer")
+});
+var expenses = (0, import_pg_core.pgTable)("expenses", {
+  id: (0, import_pg_core.text)("id").primaryKey(),
+  date: (0, import_pg_core.text)("date").notNull(),
+  category: (0, import_pg_core.text)("category").notNull(),
+  amount: (0, import_pg_core.integer)("amount").notNull(),
+  description: (0, import_pg_core.text)("description"),
+  paidBy: (0, import_pg_core.text)("paid_by")
 });
 
 // src/db/index.ts
@@ -706,6 +715,39 @@ async function upsertShopSettings(data) {
     handleDbError("upsertShopSettings", error);
   }
 }
+async function getAllExpenses() {
+  if (!db) return [];
+  try {
+    return await db.select().from(expenses);
+  } catch (error) {
+    handleDbError("getAllExpenses", error);
+  }
+}
+async function createExpense(data) {
+  if (!db) return null;
+  try {
+    const res = await db.insert(expenses).values({
+      id: data.id,
+      date: data.date,
+      category: data.category,
+      amount: data.amount,
+      description: data.description || null,
+      paidBy: data.paidBy || null
+    }).returning();
+    return res[0];
+  } catch (error) {
+    handleDbError("createExpense", error);
+  }
+}
+async function deleteExpenseById(id) {
+  if (!db) return false;
+  try {
+    await db.delete(expenses).where((0, import_drizzle_orm.eq)(expenses.id, id));
+    return true;
+  } catch (error) {
+    handleDbError("deleteExpenseById", error);
+  }
+}
 
 // server.ts
 var authenticateUser = async (req, res, next) => {
@@ -871,6 +913,31 @@ async function startServer() {
       res.json(saved);
     } catch (error) {
       res.status(500).json({ error: error.message });
+    }
+  });
+  app.get("/api/expenses", async (req, res) => {
+    try {
+      const data = await getAllExpenses();
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+  app.post("/api/expenses", async (req, res) => {
+    try {
+      const data = await createExpense(req.body);
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+  app.delete("/api/expenses/:id", async (req, res) => {
+    try {
+      const success = await deleteExpenseById(req.params.id);
+      if (success) res.json({ success: true });
+      else res.status(500).json({ error: "Failed to delete" });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
     }
   });
   app.get("/api/settings", async (req, res) => {

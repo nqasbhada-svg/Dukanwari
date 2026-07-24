@@ -13,7 +13,8 @@ import {
   invoices, 
   purchaseBills, 
   auditLogs, 
-  shopSettings 
+  shopSettings,
+  expenses 
 } from './schema.ts';
 import { eq, desc } from 'drizzle-orm';
 
@@ -553,5 +554,41 @@ export async function upsertShopSettings(data: any) {
     return result[0];
   } catch (error) {
     handleDbError('upsertShopSettings', error);
+  }
+}
+
+export async function getAllExpenses() {
+  if (!db) return [];
+  try {
+    return await db.select().from(expenses);
+  } catch (error) {
+    handleDbError('getAllExpenses', error);
+  }
+}
+
+export async function createExpense(data: any) {
+  if (!db) return null;
+  try {
+    const res = await db.insert(expenses).values({
+      id: data.id,
+      date: data.date,
+      category: data.category,
+      amount: data.amount,
+      description: data.description || null,
+      paidBy: data.paidBy || null,
+    }).returning();
+    return res[0];
+  } catch (error) {
+    handleDbError('createExpense', error);
+  }
+}
+
+export async function deleteExpenseById(id: string) {
+  if (!db) return false;
+  try {
+    await db.delete(expenses).where(eq(expenses.id, id));
+    return true;
+  } catch (error) {
+    handleDbError('deleteExpenseById', error);
   }
 }

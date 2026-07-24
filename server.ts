@@ -27,7 +27,10 @@ import {
   getAllAuditLogs,
   createAuditLog,
   getShopSettings,
-  upsertShopSettings
+  upsertShopSettings,
+  getAllExpenses,
+  createExpense,
+  deleteExpenseById
 } from './src/db/queries.ts';
 
 // Request type with attached Firebase user context
@@ -236,6 +239,34 @@ async function startServer() {
   });
 
   // --- Settings Endpoints ---
+  app.get('/api/expenses', async (req, res) => {
+    try {
+      const data = await getAllExpenses();
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  app.post('/api/expenses', async (req, res) => {
+    try {
+      const data = await createExpense(req.body);
+      res.json(data);
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  app.delete('/api/expenses/:id', async (req, res) => {
+    try {
+      const success = await deleteExpenseById(req.params.id);
+      if (success) res.json({ success: true });
+      else res.status(500).json({ error: 'Failed to delete' });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
   app.get('/api/settings', async (req, res) => {
     try {
       const data = await getShopSettings();
