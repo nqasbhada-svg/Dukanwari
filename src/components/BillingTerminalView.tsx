@@ -561,7 +561,11 @@ export default function BillingTerminalView({
                 onClick={() => setPaymentMode(mode as any)}
                 className={`py-3 px-2 rounded-2xl text-xs font-extrabold border-2 transition-all flex flex-col items-center gap-1.5 ${
                   paymentMode === mode 
-                    ? `bg-${color}-50 text-${color}-600 border-${color}-400 shadow-sm transform scale-105` 
+                    ? (mode === 'UPI' ? 'bg-blue-50 text-slate-800 border-blue-400 shadow-sm transform scale-105' 
+                     : mode === 'Cash' ? 'bg-emerald-50 text-emerald-700 border-emerald-400 shadow-sm transform scale-105'
+                     : mode === 'Card' ? 'bg-violet-50 text-violet-700 border-violet-400 shadow-sm transform scale-105'
+                     : mode === 'Credit' ? 'bg-rose-50 text-rose-700 border-rose-400 shadow-sm transform scale-105'
+                     : 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-400 shadow-sm transform scale-105')
                     : 'border-slate-100 hover:bg-slate-50 text-slate-400 hover:text-slate-600 hover:border-slate-200'
                 }`}
               >
