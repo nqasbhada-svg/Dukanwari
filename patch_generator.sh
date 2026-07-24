@@ -1,11 +1,12 @@
+cat << 'INNER_EOF' > src/utils/pdfGenerator.ts
 import html2pdf from 'html2pdf.js';
 
 interface Html2PdfOptions {
   margin: number;
   filename: string;
-  image: { type: 'jpeg' | 'png' | 'webp'; quality: number };
+  image: { type: string; quality: number };
   html2canvas: { scale: number; useCORS: boolean; letterRendering: boolean };
-  jsPDF: { unit: string; format: string | number[]; orientation: 'portrait' | 'landscape' };
+  jsPDF: { unit: string; format: string | number[]; orientation: string };
 }
 
 function withOklchPatch<T>(fn: () => Promise<T>): Promise<T> {
@@ -14,14 +15,14 @@ function withOklchPatch<T>(fn: () => Promise<T>): Promise<T> {
     const style = originalGetComputedStyle(el, pseudoElt);
     return new Proxy(style, {
       get(target, prop) {
-        const val = target[prop as keyof CSSStyleDeclaration];
+        const val = target[prop as any];
         if (typeof val === 'string' && val.includes('oklch')) {
           // crude approximation just to avoid crashing
           // we can just strip it or replace with a safe rgb
           return val.replace(/oklch\([^)]+\)/g, 'rgb(128, 128, 128)');
         }
         if (typeof val === 'function') {
-          return (val as Function).bind(target);
+          return val.bind(target);
         }
         return val;
       }
@@ -58,7 +59,7 @@ export async function downloadElementAsPDF(elementId: string, filename: string):
         opt.margin = 5;
       }
 
-      await html2pdf().set(opt as any).from(element).save();
+      await html2pdf().set(opt).from(element).save();
       element.setAttribute('style', originalStyles);
       return true;
     } catch (error) {
@@ -93,7 +94,7 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
         opt.margin = 5;
       }
 
-      const pdfBlob = await html2pdf().set(opt as any).from(element).outputPdf('blob');
+      const pdfBlob = await html2pdf().set(opt).from(element).outputPdf('blob');
       element.setAttribute('style', originalStyles);
 
       const file = new File([pdfBlob], filename, { type: 'application/pdf' });
@@ -106,7 +107,7 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
         });
         return true;
       } else {
-        await html2pdf().set(opt as any).from(element).save();
+        await html2pdf().set(opt).from(element).save();
         return false;
       }
     } catch (error) {
@@ -115,3 +116,4 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
     }
   });
 }
+INNER_EOF

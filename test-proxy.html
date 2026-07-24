@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+<div id="target" style="color: oklch(0.5 0.1 200);">Hello</div>
+<script>
+const originalGetComputedStyle = window.getComputedStyle;
+window.getComputedStyle = function(el, pseudo) {
+    const style = originalGetComputedStyle(el, pseudo);
+    return new Proxy(style, {
+        get(target, prop) {
+            let val = target[prop];
+            if (typeof val === 'string' && val.includes('oklch')) {
+                return 'rgb(255, 0, 0)';
+            }
+            if (typeof val === 'function') {
+                return val.bind(target);
+            }
+            return val;
+        }
+    });
+};
+const style = window.getComputedStyle(document.getElementById('target'));
+console.log(style.color); // should be rgb(255, 0, 0)
+</script>
+</body>
+</html>
