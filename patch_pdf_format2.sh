@@ -1,3 +1,4 @@
+cat << 'INNER_EOF' > src/utils/pdfGenerator.ts
 import html2pdf from 'html2pdf.js';
 
 interface Html2PdfOptions {
@@ -135,3 +136,4 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
     }
   });
 }
+INNER_EOF

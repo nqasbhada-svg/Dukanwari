@@ -1,7 +1,8 @@
+cat << 'INNER_EOF' > src/utils/pdfGenerator.ts
 import html2pdf from 'html2pdf.js';
 
 interface Html2PdfOptions {
-  margin: number | number[];
+  margin: number;
   filename: string;
   image: { type: 'jpeg' | 'png' | 'webp'; quality: number };
   html2canvas: { scale: number; useCORS: boolean; letterRendering: boolean; windowWidth?: number };
@@ -45,11 +46,14 @@ function prepareElementForPdf(element: HTMLElement) {
   const originalStyles = element.getAttribute('style') || '';
   const originalClasses = element.className;
   
+  // Temporarily force A4 width classes for the PDF if it's the modal
+  if (element.id === 'invoice-preview-modal-area') {
+    element.className = element.className.replace(/max-w-\[380px\]/, 'max-w-[800px] w-[800px]');
+  }
+  
   // Basic resets for printing
   element.style.borderRadius = '0px';
   element.style.boxShadow = 'none';
-  // Give it a solid white background so it doesn't become transparent
-  element.style.backgroundColor = '#ffffff';
   
   return { originalStyles, originalClasses };
 }
@@ -68,10 +72,10 @@ export async function downloadElementAsPDF(elementId: string, filename: string):
       const { originalStyles, originalClasses } = prepareElementForPdf(element);
 
       const opt: Html2PdfOptions = {
-        margin: [10, 10, 10, 10], // top, left, bottom, right margins in mm
+        margin: [10, 10, 10, 10], // top, left, bottom, right margins
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true, letterRendering: true }, // higher scale for crisp text
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
@@ -103,7 +107,7 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
         margin: [10, 10, 10, 10],
         filename: filename,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+        html2canvas: { scale: 2, useCORS: true, letterRendering: true, windowWidth: 800 },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
       
@@ -135,3 +139,4 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
     }
   });
 }
+INNER_EOF
