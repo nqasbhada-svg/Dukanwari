@@ -2410,7 +2410,7 @@ export default function App() {
                       userSession={session}
                       isMr={isMr}
                       onUpdateSettings={(newSettings) => setShopSettings(newSettings)}
-                      onToggleUserRole={(role) => setSession({ ...session, role })}
+                                            onToggleUserRole={(role) => setSession({ ...session, role })}
                       syncStatusState={syncStatusState}
                       onSyncAll={handleSyncAll}
                     />

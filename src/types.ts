@@ -165,6 +165,7 @@ export interface ShopSettings {
   templateInvoice?: string;
   templateReminder?: string;
   templateOffer?: string;
+  autoSave?: boolean;
 }
 
 export interface Expense {

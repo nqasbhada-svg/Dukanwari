@@ -87,6 +87,7 @@ export default function AdminPanel({
   const [enableGstBilling, setEnableGstBilling] = useState(settings.enableGstBilling);
   const [thermalPrinterWidth, setThermalPrinterWidth] = useState<'58mm' | '80mm'>(settings.thermalPrinterWidth);
   const [whatsappApiToken, setWhatsappApiToken] = useState(settings.whatsappApiToken);
+  const [autoSave, setAutoSave] = useState(settings.autoSave ?? false);
 
   // WhatsApp templates state copy
   const [templateInvoice, setTemplateInvoice] = useState(settings.templateInvoice || '');
@@ -267,6 +268,44 @@ export default function AdminPanel({
     runResolution();
   }, [localProduct, masterProduct, syncStrategy, enableFieldMerging, clientPriorityField, masterPriorityField]);
 
+  
+  // Auto-Save Effect
+  useEffect(() => {
+    if (autoSave) {
+      // Create a debounce so it doesn't fire on every single keystroke if possible,
+      // but the requirement says "immediately", so we can just fire it on a small timeout or directly.
+      const timer = setTimeout(() => {
+        onUpdateSettings({
+          ...settings,
+          shopName,
+          shopNameMr,
+          address,
+          addressMr,
+          mobile,
+          whatsapp,
+          gstNumber,
+          enableGstBilling,
+          thermalPrinterWidth,
+          whatsappApiToken,
+          templateInvoice,
+          templateReminder,
+          templateOffer,
+          autoSave
+        });
+        
+        // Immediately trigger Supabase sync
+        if (onSyncAll) {
+          onSyncAll();
+        }
+      }, 500); // 500ms debounce to avoid excessive writes while typing
+      return () => clearTimeout(timer);
+    }
+  }, [
+    autoSave, shopName, shopNameMr, address, addressMr, mobile, whatsapp, 
+    gstNumber, enableGstBilling, thermalPrinterWidth, whatsappApiToken,
+    templateInvoice, templateReminder, templateOffer
+  ]);
+
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     onUpdateSettings({
@@ -283,7 +322,8 @@ export default function AdminPanel({
       whatsappApiToken,
       templateInvoice,
       templateReminder,
-      templateOffer
+      templateOffer,
+      autoSave
     });
     alert(isMr ? 'व्यवसाय सेटिंग्ज यशस्वीरित्या जतन केल्या गेल्या!' : 'Business Settings updated successfully!');
   };
@@ -345,6 +385,25 @@ export default function AdminPanel({
 
       {/* Main Content Area (3 Columns) */}
       <div className="lg:col-span-3 bg-white p-5 rounded-xl border border-slate-200">
+
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-100">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-800 flex items-center gap-2">
+              <Settings size={18} className="text-indigo-600" />
+              {isMr ? 'पॅनेल व्यवस्थापित करा' : 'Administration Panel'}
+            </h2>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-slate-600">{isMr ? 'ऑटो-सेव्ह' : 'Auto-Save'}</span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" className="sr-only peer" checked={autoSave} onChange={(e) => {
+                setAutoSave(e.target.checked);
+              }} />
+              <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+            </label>
+          </div>
+        </div>
+
         
         {/* TAB 1: Shop Profile Settings */}
         {activeAdminTab === 'profile' && (
@@ -460,14 +519,14 @@ export default function AdminPanel({
               </div>
             </div>
 
-            <button
+            {!autoSave && <button
               id="save-admin-settings-btn"
               type="submit"
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition"
             >
               <Save size={14} />
               Save Config & Settings
-            </button>
+            </button>}
           </form>
         )}
 
@@ -569,14 +628,14 @@ export default function AdminPanel({
                   )}
 
                   <div className="flex gap-2">
-                    <button
+                    {!autoSave && <button
                       id="save-whatsapp-templates-btn"
                       type="submit"
                       className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-5 py-2.5 rounded-lg transition"
                     >
                       <Save size={14} />
                       {isMr ? 'टेम्पलेट्स जतन करा' : 'Save Templates & Layout'}
-                    </button>
+                    </button>}
                     <button
                       id="reset-whatsapp-templates-btn"
                       type="button"
