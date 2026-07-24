@@ -77,7 +77,7 @@ export async function downloadElementAsPDF(elementId: string, filename: string):
     };
 
     // If it's a thermal receipt, format it appropriately
-    if (elementId.includes('thermal') || elementId.includes('modal') || element.offsetWidth < 400) {
+    if (elementId.includes('thermal')) {
       opt.jsPDF = { unit: 'mm', format: [80, 200], orientation: 'portrait' };
       opt.margin = 5;
     }
@@ -134,7 +134,7 @@ export async function shareElementAsPDF(elementId: string, filename: string, tit
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
-    if (elementId.includes('thermal') || elementId.includes('modal') || element.offsetWidth < 400) {
+    if (elementId.includes('thermal')) {
       opt.jsPDF = { unit: 'mm', format: [80, 200], orientation: 'portrait' };
       opt.margin = 5;
     }
