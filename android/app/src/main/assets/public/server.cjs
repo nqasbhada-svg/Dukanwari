@@ -254,9 +254,150 @@ async function getOrCreateUser(uid, email, name, mobile) {
     handleDbError("getOrCreateUser", error);
   }
 }
+function mapDbRecordToRegistration(dbRecord) {
+  if (!dbRecord) return null;
+  return {
+    id: dbRecord.id,
+    shopName: dbRecord.shopName,
+    ownerName: dbRecord.ownerName,
+    mobile: dbRecord.mobile,
+    email: dbRecord.email,
+    gstNumber: dbRecord.gstNumber || void 0,
+    businessRegNumber: dbRecord.businessRegNumber || void 0,
+    city: dbRecord.city,
+    state: dbRecord.state,
+    pincode: dbRecord.pincode,
+    loginInfo: {
+      username: dbRecord.username,
+      password: dbRecord.password
+    },
+    shopDetails: {
+      shopType: dbRecord.shopType,
+      employeesCount: Number(dbRecord.employeesCount) || 1,
+      openingDate: dbRecord.openingDate
+    },
+    documents: {
+      ownerIdProof: dbRecord.ownerIdProof,
+      shopLicense: dbRecord.shopLicense || void 0,
+      gstCertificate: dbRecord.gstCertificate || void 0,
+      shopPhoto: dbRecord.shopPhoto || void 0
+    },
+    subscription: {
+      status: dbRecord.status,
+      subscriptionType: dbRecord.subscriptionType,
+      startDate: dbRecord.startDate || void 0,
+      endDate: dbRecord.endDate || void 0,
+      notes: dbRecord.notes || void 0
+    },
+    createdAt: dbRecord.createdAt || void 0
+  };
+}
 async function getAllRegistrations() {
   try {
-    return await db.select().from(registrations).orderBy((0, import_drizzle_orm.desc)(registrations.createdAt));
+    let records = await db.select().from(registrations).orderBy((0, import_drizzle_orm.desc)(registrations.createdAt));
+    const defaultRegs = [
+      {
+        id: "reg-2026-001",
+        shopName: "Sanskriti Fashion",
+        ownerName: "Sanskriti Patil",
+        mobile: "9876543211",
+        email: "sanskriti@example.com",
+        gstNumber: "27AAAAA1234A1ZA",
+        businessRegNumber: "BRN-00123",
+        city: "Pune",
+        state: "Maharashtra",
+        pincode: "411001",
+        username: "sanskriti",
+        password: "password123",
+        shopType: "Retail Boutique",
+        employeesCount: 4,
+        openingDate: "2026-01-15",
+        ownerIdProof: "sanskriti_aadhar.jpg",
+        shopLicense: "sanskriti_license.pdf",
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "Pending",
+        subscriptionType: "1 Year",
+        startDate: null,
+        endDate: null,
+        notes: "New registration submitted. Pending review.",
+        createdAt: "2026-07-19T10:00:00.000Z"
+      },
+      {
+        id: "reg-2026-002",
+        shopName: "Rajshree Products",
+        ownerName: "Rajesh Shinde",
+        mobile: "9876543212",
+        email: "rajesh@example.com",
+        gstNumber: "27BBBBB1234B1ZB",
+        businessRegNumber: "BRN-00456",
+        city: "Mumbai",
+        state: "Maharashtra",
+        pincode: "400001",
+        username: "rajesh",
+        password: "password123",
+        shopType: "Wholesale Clothes",
+        employeesCount: 8,
+        openingDate: "2025-05-10",
+        ownerIdProof: "rajesh_pan.jpg",
+        shopLicense: "rajesh_license.pdf",
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "Active",
+        subscriptionType: "1 Year",
+        startDate: "2026-07-01",
+        endDate: "2027-07-01",
+        notes: "Activated on 2026-07-01",
+        createdAt: "2026-06-30T10:00:00.000Z"
+      },
+      {
+        id: "reg-2026-003",
+        shopName: "Pooja Sarees",
+        ownerName: "Pooja Kadam",
+        mobile: "9876543213",
+        email: "pooja@example.com",
+        gstNumber: "27CCCCC1234C1ZC",
+        businessRegNumber: "BRN-00789",
+        city: "Nagpur",
+        state: "Maharashtra",
+        pincode: "440001",
+        username: "pooja",
+        password: "password123",
+        shopType: "Retail Sarees",
+        employeesCount: 3,
+        openingDate: "2026-03-20",
+        ownerIdProof: "pooja_aadhar.jpg",
+        shopLicense: null,
+        gstCertificate: null,
+        shopPhoto: null,
+        status: "MoreInfoNeeded",
+        subscriptionType: "1 Year",
+        startDate: null,
+        endDate: null,
+        notes: "Uploaded shop license is blurred. Please re-upload clear copy.",
+        createdAt: "2026-07-18T10:00:00.000Z"
+      }
+    ];
+    let needsRefetch = false;
+    const defaultIds = ["reg-2026-001", "reg-2026-002", "reg-2026-003"];
+    for (const regId of defaultIds) {
+      const exists = records.some((r) => r.id === regId);
+      if (!exists) {
+        const reg = defaultRegs.find((d) => d.id === regId);
+        if (reg) {
+          try {
+            await db.insert(registrations).values(reg).onConflictDoNothing();
+            needsRefetch = true;
+          } catch (seedErr) {
+            console.error(`Failed to seed registration ${reg.id}:`, seedErr);
+          }
+        }
+      }
+    }
+    if (needsRefetch) {
+      records = await db.select().from(registrations).orderBy((0, import_drizzle_orm.desc)(registrations.createdAt));
+    }
+    return records.map(mapDbRecordToRegistration);
   } catch (error) {
     handleDbError("getAllRegistrations", error);
   }
@@ -290,7 +431,7 @@ async function createRegistration(data) {
       notes: data.subscription.notes || null,
       createdAt: data.createdAt || (/* @__PURE__ */ new Date()).toISOString()
     }).returning();
-    return result[0];
+    return mapDbRecordToRegistration(result[0]);
   } catch (error) {
     handleDbError("createRegistration", error);
   }
@@ -307,7 +448,7 @@ async function updateRegistrationStatus(id, status, subscription, notes) {
       if (subscription.endDate) updateValues.endDate = subscription.endDate;
     }
     const result = await db.update(registrations).set(updateValues).where((0, import_drizzle_orm.eq)(registrations.id, id)).returning();
-    return result[0];
+    return mapDbRecordToRegistration(result[0]);
   } catch (error) {
     handleDbError("updateRegistrationStatus", error);
   }
@@ -449,6 +590,36 @@ async function createInvoice(data) {
     return result[0];
   } catch (error) {
     handleDbError("createInvoice", error);
+  }
+}
+async function upsertInvoice(data) {
+  try {
+    const values = {
+      id: data.id,
+      invoiceNumber: data.invoiceNumber,
+      date: data.date,
+      customerId: data.customerId,
+      customerName: data.customerName,
+      customerMobile: data.customerMobile,
+      type: data.type || "Non-GST",
+      items: data.items,
+      subtotal: Number(data.subtotal) || 0,
+      discount: Number(data.discount) || 0,
+      taxAmount: Number(data.taxAmount) || 0,
+      grandTotal: Number(data.grandTotal) || 0,
+      paymentMode: data.paymentMode || "Cash",
+      splitDetails: data.splitDetails || null,
+      whatsappSent: !!data.whatsappSent,
+      status: data.status || "Paid",
+      amountPaid: Number(data.amountPaid) || 0
+    };
+    const result = await db.insert(invoices).values(values).onConflictDoUpdate({
+      target: invoices.id,
+      set: values
+    }).returning();
+    return result[0];
+  } catch (error) {
+    handleDbError("upsertInvoice", error);
   }
 }
 async function getAllPurchaseBills() {
@@ -718,12 +889,88 @@ async function startServer() {
       res.status(500).json({ error: error.message });
     }
   });
+  app.post("/api/sync-all", async (req, res) => {
+    try {
+      const { products: productsList, customers: customersList, invoices: invoicesList } = req.body || {};
+      const syncStatus = {
+        productsSynced: 0,
+        customersSynced: 0,
+        invoicesSynced: 0,
+        errors: []
+      };
+      if (Array.isArray(productsList)) {
+        for (const item of productsList) {
+          try {
+            if (!item || typeof item !== "object") {
+              throw new Error("Product item is not a valid object");
+            }
+            await upsertProduct(item);
+            syncStatus.productsSynced++;
+          } catch (e) {
+            const label = item && typeof item === "object" ? item.itemName || item.id || "unnamed" : "invalid";
+            syncStatus.errors.push(`Product [${label}]: ${e.message}`);
+          }
+        }
+      }
+      if (Array.isArray(customersList)) {
+        for (const item of customersList) {
+          try {
+            if (!item || typeof item !== "object") {
+              throw new Error("Customer item is not a valid object");
+            }
+            await upsertCustomer(item);
+            syncStatus.customersSynced++;
+          } catch (e) {
+            const label = item && typeof item === "object" ? item.name || item.id || "unnamed" : "invalid";
+            syncStatus.errors.push(`Customer [${label}]: ${e.message}`);
+          }
+        }
+      }
+      if (Array.isArray(invoicesList)) {
+        for (const item of invoicesList) {
+          try {
+            if (!item || typeof item !== "object") {
+              throw new Error("Invoice item is not a valid object");
+            }
+            await upsertInvoice(item);
+            syncStatus.invoicesSynced++;
+          } catch (e) {
+            const label = item && typeof item === "object" ? item.invoiceNumber || item.id || "unnamed" : "invalid";
+            syncStatus.errors.push(`Invoice [${label}]: ${e.message}`);
+          }
+        }
+      }
+      const success = syncStatus.errors.length === 0;
+      res.json({
+        success,
+        ...syncStatus
+      });
+    } catch (error) {
+      console.error("Critical failure in /api/sync-all:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
   if (process.env.NODE_ENV !== "production") {
     const vite = await (0, import_vite.createServer)({
       server: { middlewareMode: true },
       appType: "spa"
     });
     app.use(vite.middlewares);
+    app.get("*", async (req, res, next) => {
+      const url = req.originalUrl;
+      if (url.startsWith("/api") || import_path.default.extname(url)) {
+        return next();
+      }
+      try {
+        const fs = await import("fs");
+        const htmlPath = import_path.default.resolve(process.cwd(), "index.html");
+        let html = fs.readFileSync(htmlPath, "utf-8");
+        html = await vite.transformIndexHtml(url, html);
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      } catch (e) {
+        next(e);
+      }
+    });
   } else {
     const distPath = import_path.default.join(process.cwd(), "dist");
     app.use(import_express.default.static(distPath));
